@@ -1,0 +1,5 @@
+{
+  "name": "IAVEXIS",
+  "description": "Intelligent chat system for graphic designers, focused on sports design and Canva.",
+  "requestFramePermissions": ["microphone"]
+}

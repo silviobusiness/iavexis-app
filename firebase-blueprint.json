@@ -1,0 +1,199 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and long-term memory (creative DNA).",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "photoURL": { "type": "string" },
+        "coverURL": { "type": "string" },
+        "description": { "type": "string" },
+        "creativeDNA": {
+          "type": "object",
+          "properties": {
+            "preferredStyle": { "type": "string" },
+            "artTypes": { "type": "array", "items": { "type": "string" } },
+            "goals": { "type": "array", "items": { "type": "string" } },
+            "platforms": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "name", "email", "createdAt", "updatedAt"]
+    },
+    "Chat": {
+      "title": "Chat",
+      "description": "A conversation thread.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner UID" },
+        "title": { "type": "string" },
+        "folderId": { "type": "string", "description": "Optional folder ID" },
+        "isPinned": { "type": "boolean" },
+        "isProject": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "isPinned", "isProject", "createdAt", "updatedAt"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "A single message in a chat.",
+      "type": "object",
+      "properties": {
+        "chatId": { "type": "string" },
+        "userId": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "assistant"] },
+        "content": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "feedback": { "type": "string", "enum": ["positive", "negative", "none"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["chatId", "userId", "role", "content", "feedback", "createdAt"]
+    },
+    "Folder": {
+      "title": "Folder",
+      "description": "A folder to organize chats.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "createdAt"]
+    },
+    "LibraryItem": {
+      "title": "LibraryItem",
+      "description": "Saved ideas, effects, structures, etc.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "category": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "category", "title", "content", "createdAt", "updatedAt"]
+    },
+    "Lead": {
+      "title": "Lead",
+      "description": "CRM lead data.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["cliente", "influenciador", "parceiro"] },
+        "serviceType": { "type": "string" },
+        "status": { "type": "string", "enum": ["novo_lead", "contato_iniciado", "proposta_enviada", "negociacao", "aguardando_resposta", "fechado"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "type", "serviceType", "status", "createdAt", "updatedAt"]
+    },
+    "SocialMetric": {
+      "title": "SocialMetric",
+      "description": "Social media metrics.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "followers": { "type": "number" },
+        "engagement": { "type": "number" },
+        "reach": { "type": "number" },
+        "impressions": { "type": "number" },
+        "platform": { "type": "string" },
+        "change": { "type": "number" },
+        "value": { "type": "number" },
+        "name": { "type": "string" }
+      },
+      "required": ["userId", "date", "followers", "engagement", "reach", "impressions", "platform", "change", "value", "name"]
+    },
+    "ContentSuggestion": {
+      "title": "ContentSuggestion",
+      "description": "Content suggestions.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "type": { "type": "string", "enum": ["reels", "post", "stories", "carousel"] },
+        "trend": { "type": "string", "enum": ["high", "medium", "low"] },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "platform": { "type": "string" },
+        "potential": { "type": "string" }
+      },
+      "required": ["userId", "title", "description", "type", "trend", "tags", "platform", "potential"]
+    },
+    "PostPerformance": {
+      "title": "PostPerformance",
+      "description": "Post performance data.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "type": { "type": "string", "enum": ["reels", "post", "stories", "carousel"] },
+        "reach": { "type": "number" },
+        "date": { "type": "string", "format": "date-time" },
+        "thumbnail": { "type": "string" },
+        "title": { "type": "string" },
+        "engagement": {
+          "type": "object",
+          "properties": {
+            "likes": { "type": "number" },
+            "comments": { "type": "number" },
+            "shares": { "type": "number" },
+            "saves": { "type": "number" }
+          }
+        },
+        "platform": { "type": "string" }
+      },
+      "required": ["userId", "type", "reach", "date", "thumbnail", "title", "engagement", "platform"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles and creative DNA."
+    },
+    "/chats/{chatId}": {
+      "schema": { "$ref": "#/entities/Chat" },
+      "description": "User chats."
+    },
+    "/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/Message" },
+      "description": "Messages within chats."
+    },
+    "/folders/{folderId}": {
+      "schema": { "$ref": "#/entities/Folder" },
+      "description": "Folders for organizing chats."
+    },
+    "/libraryItems/{itemId}": {
+      "schema": { "$ref": "#/entities/LibraryItem" },
+      "description": "Saved library items."
+    },
+    "/feedback/{feedbackId}": {
+      "schema": { "$ref": "#/entities/Feedback" },
+      "description": "User feedback collection."
+    },
+    "/leads/{leadId}": {
+      "schema": { "$ref": "#/entities/Lead" },
+      "description": "CRM lead data."
+    },
+    "/social_metrics/{metricId}": {
+      "schema": { "$ref": "#/entities/SocialMetric" },
+      "description": "Social media metrics."
+    },
+    "/content_suggestions/{suggestionId}": {
+      "schema": { "$ref": "#/entities/ContentSuggestion" },
+      "description": "Content suggestions."
+    },
+    "/post_performance/{performanceId}": {
+      "schema": { "$ref": "#/entities/PostPerformance" },
+      "description": "Post performance data."
+    }
+  }
+}
