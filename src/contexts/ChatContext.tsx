@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { collection, query, where, onSnapshot, orderBy, addDoc, updateDoc, doc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, onSnapshot, orderBy, addDoc, updateDoc, doc, deleteDoc, serverTimestamp, where } from 'firebase/firestore';
 import { db } from '../firebase';
-import { useAuth, handleFirestoreError, OperationType } from './AuthContext';
+import { handleFirestoreError, OperationType } from '../utils/firestoreUtils';
 
 export interface Chat {
   id: string;
@@ -70,17 +70,13 @@ interface ChatContextType {
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
   const [chats, setChats] = useState<Chat[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user) return;
-
     const chatsQuery = query(
-      collection(db, 'chats'),
-      where('userId', '==', user.uid)
+      collection(db, 'chats')
     );
 
     const unsubscribeChats = onSnapshot(chatsQuery, (snapshot) => {
@@ -93,8 +89,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     });
 
     const foldersQuery = query(
-      collection(db, 'folders'),
-      where('userId', '==', user.uid)
+      collection(db, 'folders')
     );
 
     const unsubscribeFolders = onSnapshot(foldersQuery, (snapshot) => {
@@ -110,14 +105,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       unsubscribeChats();
       unsubscribeFolders();
     };
-  }, [user]);
+  }, []);
 
   const createChat = async (title = 'Novo Chat', isProject = false) => {
-    if (!user) throw new Error('Not authenticated');
-    
     const now = new Date().toISOString();
     const chatData = {
-      userId: user.uid,
+      userId: 'guest-user',
       title,
       isPinned: false,
       isFavorite: false,
@@ -138,7 +131,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateChat = async (id: string, data: Partial<Chat>) => {
-    if (!user) return;
     const chatRef = doc(db, 'chats', id);
     try {
       await updateDoc(chatRef, { ...data, updatedAt: new Date().toISOString() });
@@ -148,7 +140,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteChat = async (id: string) => {
-    if (!user) return;
     try {
       await deleteDoc(doc(db, 'chats', id));
       if (activeChatId === id) setActiveChatId(null);
@@ -158,10 +149,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   };
 
   const createFolder = async (name: string, parentId: string | null = null) => {
-    if (!user) return;
     try {
       await addDoc(collection(db, 'folders'), {
-        userId: user.uid,
+        userId: 'guest-user',
         name,
         parentId,
         createdAt: new Date().toISOString(),
@@ -172,7 +162,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateFolder = async (id: string, data: Partial<Folder>) => {
-    if (!user) return;
     const folderRef = doc(db, 'folders', id);
     try {
       await updateDoc(folderRef, { ...data });
@@ -182,12 +171,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteFolder = async (id: string) => {
-    if (!user) return;
     try {
       await updateDoc(doc(db, 'folders', id), {
         deleted: true,
         deletedAt: new Date().toISOString(),
-        deletedBy: user.uid,
+        deletedBy: 'guest-user',
       });
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `folders/${id}`);
@@ -195,7 +183,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   };
 
   const restoreFolder = async (id: string) => {
-    if (!user) return;
     try {
       await updateDoc(doc(db, 'folders', id), {
         deleted: false,
@@ -208,7 +195,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   };
 
   const hardDeleteFolder = async (id: string) => {
-    if (!user) return;
     try {
       // Recursively delete subfolders and chats
       const subfolders = folders.filter(f => f.parentId === id);
@@ -226,13 +212,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   };
 
   const duplicateFolder = async (id: string, parentId: string | null = null) => {
-    if (!user) return;
     try {
       const folderToDuplicate = folders.find(f => f.id === id);
       if (!folderToDuplicate) return;
 
       const newFolderData = {
-        userId: user.uid,
+        userId: 'guest-user',
         name: `${folderToDuplicate.name} (Cópia)`,
         parentId: parentId !== null ? parentId : folderToDuplicate.parentId,
         color: folderToDuplicate.color || null,
@@ -247,7 +232,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       const chatsInFolder = chats.filter(c => c.folderId === id);
       for (const chat of chatsInFolder) {
         const newChatData = {
-          userId: user.uid,
+          userId: 'guest-user',
           title: `${chat.title} (Cópia)`,
           folderId: newFolderRef.id,
           isPinned: false,
@@ -271,7 +256,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   };
 
   const sendMessage = async (text: string, imageUrl?: string, base64Data?: string, mimeType?: string) => {
-    if (!user) return;
     
     let targetChatId = activeChatId;
     if (!targetChatId) {
@@ -283,7 +267,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     try {
       const userMessageData: any = {
         chatId: targetChatId,
-        userId: user.uid,
+        userId: 'guest-user',
         role: 'user',
         content: text,
         feedback: 'none',
@@ -321,7 +305,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       // Combine and remove duplicates
       const contextMessages = Array.from(new Set([...pinnedMessages, ...lastMessages]))
         .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-
+      
       const imagePayload = base64Data && mimeType ? [{ base64: base64Data, mimeType }] : [];
 
       // Import generateChatResponse dynamically
@@ -331,7 +315,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       try {
         await addDoc(collection(db, 'messages'), {
           chatId: targetChatId,
-          userId: user.uid,
+          userId: 'guest-user',
           role: 'assistant',
           content: aiText,
           feedback: 'none',
@@ -346,7 +330,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       console.error('Error sending message:', error);
       await addDoc(collection(db, 'messages'), {
         chatId: targetChatId,
-        userId: user.uid,
+        userId: 'guest-user',
         role: 'assistant',
         content: `❌ Erro: ${error.message || 'Ocorreu um erro ao processar sua mensagem. Por favor, tente novamente.'}`,
         feedback: 'none',
@@ -356,7 +340,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   };
 
   const toggleMessagePin = async (messageId: string, isPinned: boolean) => {
-    if (!user) return;
     try {
       await updateDoc(doc(db, 'messages', messageId), { isPinnedContext: isPinned });
     } catch (error) {
@@ -365,7 +348,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   };
 
   const remixMessage = async (messageId: string, option: string) => {
-    if (!user || !activeChatId) return;
+    if (!activeChatId) return;
     
     try {
       // Find the message to remix

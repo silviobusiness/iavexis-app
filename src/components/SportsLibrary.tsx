@@ -4,7 +4,7 @@ import { Search, Upload, Heart, Download, Eye, X, Image as ImageIcon, Link as Li
 import { useLibrary, LibraryItem } from '../contexts/LibraryContext';
 import { useChat } from '../contexts/ChatContext';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { storage, auth } from '../firebase';
+import { storage } from '../firebase';
 import clsx from 'clsx';
 
 const CATEGORIES = [
@@ -636,11 +636,6 @@ function UploadModal({ onClose, onSubmit, viewMode = 'assets' }: { onClose: () =
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!auth.currentUser) {
-      alert('Você precisa estar logado para fazer upload.');
-      return;
-    }
-
     setIsUploading(true);
     setUploadProgress(0);
     let finalImageUrl = formData.imageUrl;
@@ -649,7 +644,7 @@ function UploadModal({ onClose, onSubmit, viewMode = 'assets' }: { onClose: () =
       if (selectedFile) {
         const fileExt = selectedFile.name.split('.').pop();
         const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-        const storageRef = ref(storage, `library/${auth.currentUser.uid}/${fileName}`);
+        const storageRef = ref(storage, `library/guest-user/${fileName}`);
         
         const uploadTask = uploadBytesResumable(storageRef, selectedFile);
         finalImageUrl = await new Promise<string>((resolve, reject) => {

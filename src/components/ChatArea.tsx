@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useChat } from '../contexts/ChatContext';
-import { useAuth, handleFirestoreError, OperationType } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
+import { handleFirestoreError, OperationType } from '../utils/firestoreUtils';
 import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Send, Image as ImageIcon, Mic, Wand2, Library, Paperclip, X, MessageSquare, Search, ChevronUp, ChevronDown, WholeWord, CaseSensitive, Zap, Sparkles } from 'lucide-react';
@@ -21,7 +22,8 @@ import { useLibrary } from '../contexts/LibraryContext';
 
 export function ChatArea({ onToggleLibrary, isLibraryOpen }: { onToggleLibrary: () => void, isLibraryOpen: boolean }) {
   const { activeChatId, chats } = useChat();
-  const { user, profile } = useAuth();
+  const profile = { name: 'Usuário Convidado', email: 'convidado@iavexis.com', photoURL: '' };
+  const userId = 'guest-user';
   const { shortcuts, setIsHelpOpen } = useShortcuts();
   const { createItem } = useLibrary();
   const [isLoading, setIsLoading] = useState(true);
@@ -207,7 +209,7 @@ export function ChatArea({ onToggleLibrary, isLibraryOpen }: { onToggleLibrary: 
   };
 
   useEffect(() => {
-    if (!activeChatId || !user) {
+    if (!activeChatId) {
       setMessages([]);
       return;
     }
@@ -229,7 +231,7 @@ export function ChatArea({ onToggleLibrary, isLibraryOpen }: { onToggleLibrary: 
     });
 
     return () => unsubscribe();
-  }, [activeChatId, user]);
+  }, [activeChatId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -271,7 +273,7 @@ export function ChatArea({ onToggleLibrary, isLibraryOpen }: { onToggleLibrary: 
   }, [isInstantMode]);
 
   const handleSend = async () => {
-    if ((!input.trim() && imageFiles.length === 0) || !activeChatId || !user) return;
+    if ((!input.trim() && imageFiles.length === 0) || !activeChatId) return;
     if (isGenerating || isThinking || streamingContent) return;
 
     const rawUserMessage = input.trim();
@@ -297,7 +299,7 @@ export function ChatArea({ onToggleLibrary, isLibraryOpen }: { onToggleLibrary: 
       // Save user message immediately so user sees it
       const userMessageData: any = {
         chatId: activeChatId,
-        userId: user.uid,
+        userId: userId,
         role: 'user',
         content: rawUserMessage,
         feedback: 'none',
@@ -353,7 +355,7 @@ export function ChatArea({ onToggleLibrary, isLibraryOpen }: { onToggleLibrary: 
     try {
       await addDoc(collection(db, 'messages'), {
         chatId: activeChatId,
-        userId: user.uid,
+        userId: userId,
         role: 'assistant',
         content: content,
         feedback: 'none',

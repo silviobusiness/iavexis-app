@@ -1,20 +1,16 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { collection, query, where, orderBy, onSnapshot, addDoc, deleteDoc, doc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { X, Search, Plus, Bookmark, Trash2 } from 'lucide-react';
+import { X, Search, Bookmark, Trash2 } from 'lucide-react';
 
 export function LibraryPanel({ onClose }: { onClose: () => void }) {
-  const { user } = useAuth();
   const [items, setItems] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user) return;
     const q = query(
       collection(db, 'libraryItems'),
-      where('userId', '==', user.uid),
       orderBy('createdAt', 'desc')
     );
 
@@ -25,7 +21,7 @@ export function LibraryPanel({ onClose }: { onClose: () => void }) {
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, []);
 
   const categories = Array.from(new Set(items.map(item => item.category)));
 

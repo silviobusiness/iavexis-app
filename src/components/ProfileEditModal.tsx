@@ -1,6 +1,5 @@
 import React, { useState, useRef } from 'react';
 import { X, Upload, Camera, User, Image as ImageIcon, Check, Loader2, Keyboard, Settings, AlertCircle, Trash2 } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShortcutSettings } from './ShortcutSettings';
 import { TrashPanel } from './TrashPanel';
@@ -13,7 +12,8 @@ interface ProfileEditModalProps {
 type Tab = 'profile' | 'shortcuts' | 'trash';
 
 export function ProfileEditModal({ onClose }: ProfileEditModalProps) {
-  const { profile, updateProfile } = useAuth();
+  const profile = { name: 'Usuário Convidado', email: 'convidado@iavexis.com', photoURL: '', description: '', coverURL: '' };
+  const updateProfile = async (data: any) => {};
   const [activeTab, setActiveTab] = useState<Tab>('profile');
   const [name, setName] = useState(profile?.name || '');
   const [description, setDescription] = useState(profile?.description || '');

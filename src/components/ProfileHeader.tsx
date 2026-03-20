@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { Camera, Edit2, User as UserIcon, Image as ImageIcon, Settings } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ProfileEditModal } from './ProfileEditModal';
 import { BannerMarquee } from './BannerMarquee';
 import { BannerSettingsModal } from './BannerSettingsModal';
 
 export function ProfileHeader() {
-  const { profile } = useAuth();
+  const profile = { name: 'Usuário Convidado', email: 'convidado@iavexis.com', photoURL: '', description: 'Designer Esportivo & Criativo' };
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isBannerModalOpen, setIsBannerModalOpen] = useState(false);
 

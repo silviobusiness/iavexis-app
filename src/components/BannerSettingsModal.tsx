@@ -4,7 +4,7 @@ import { X, Plus, Trash, GripVertical, Settings, Image as ImageIcon, Zap, Play, 
 import { useDashboard } from '../contexts/DashboardContext';
 import { BannerArt, BannerSettings } from '../types';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { storage, auth } from '../firebase';
+import { storage } from '../firebase';
 import clsx from 'clsx';
 
 interface BannerSettingsModalProps {
@@ -24,10 +24,6 @@ export function BannerSettingsModal({ onClose }: BannerSettingsModalProps) {
     const files = e.target.files;
     if (!files || files.length === 0) return;
     if (localBannerArts.length >= 10) return;
-    if (!auth.currentUser) {
-      alert('Você precisa estar logado para fazer upload.');
-      return;
-    }
 
     setIsUploading(true);
     setUploadProgress(0);
@@ -42,7 +38,7 @@ export function BannerSettingsModal({ onClose }: BannerSettingsModalProps) {
 
     try {
       const artId = Math.random().toString(36).substr(2, 9);
-      const storageRef = ref(storage, `banners/${auth.currentUser.uid}/${artId}_${file.name}`);
+      const storageRef = ref(storage, `banners/guest-user/${artId}_${file.name}`);
       
       const uploadTask = uploadBytesResumable(storageRef, file);
       

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, deleteDoc } from 'firebase/firestore';
+import { collection, query, onSnapshot, addDoc, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { useAuth, handleFirestoreError, OperationType } from './AuthContext';
+import { handleFirestoreError, OperationType } from '../utils/firestoreUtils';
 
 export interface LibraryItem {
   id: string;
@@ -39,15 +39,11 @@ interface LibraryContextType {
 const LibraryContext = createContext<LibraryContextType | undefined>(undefined);
 
 export function LibraryProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
   const [items, setItems] = useState<LibraryItem[]>([]);
 
   useEffect(() => {
-    if (!user) return;
-
     const q = query(
-      collection(db, 'libraryItems'),
-      where('userId', '==', user.uid)
+      collection(db, 'libraryItems')
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -60,14 +56,12 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, []);
 
   const createItem = async (itemData: Partial<LibraryItem>) => {
-    if (!user) throw new Error('Not authenticated');
-    
     const now = new Date().toISOString();
     const newItem: any = {
-      userId: user.uid,
+      userId: 'guest-user',
       title: itemData.title || 'Untitled Asset',
       category: itemData.category || 'Uncategorized',
       folderId: itemData.folderId || null,
@@ -100,7 +94,6 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateItem = async (id: string, data: Partial<LibraryItem>) => {
-    if (!user) return;
     const itemRef = doc(db, 'libraryItems', id);
     try {
       await updateDoc(itemRef, { ...data, updatedAt: new Date().toISOString() });
@@ -110,7 +103,6 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteItem = async (id: string) => {
-    if (!user) return;
     try {
       await deleteDoc(doc(db, 'libraryItems', id));
     } catch (error) {

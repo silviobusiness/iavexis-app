@@ -2,17 +2,15 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import {
   collection,
   query,
-  where,
   onSnapshot,
   orderBy,
   addDoc,
   updateDoc,
   doc,
   deleteDoc,
-  serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../firebase";
-import { useAuth, handleFirestoreError, OperationType } from "./AuthContext";
+import { handleFirestoreError, OperationType } from "../utils/firestoreUtils";
 
 export type LeadType = "cliente" | "influenciador" | "parceiro";
 export type LeadStatus = "novo_lead" | "contato_iniciado" | "proposta_enviada" | "negociacao" | "aguardando_resposta" | "fechado";
@@ -27,7 +25,6 @@ export interface Interaction {
 
 export interface Lead {
   id: string;
-  userId: string;
   name: string;
   type: LeadType;
   socialMedia?: string;
@@ -99,7 +96,7 @@ interface GrowthContextType {
   suggestions: ContentSuggestion[];
   postPerformance: PostPerformance[];
   loading: boolean;
-  createLead: (data: Omit<Lead, "id" | "userId" | "createdAt" | "updatedAt">) => Promise<string>;
+  createLead: (data: Omit<Lead, "id" | "createdAt" | "updatedAt">) => Promise<string>;
   updateLead: (id: string, data: Partial<Lead>) => Promise<void>;
   deleteLead: (id: string) => Promise<void>;
   addInteraction: (leadId: string, interaction: Omit<Interaction, "id" | "date">) => Promise<void>;
@@ -109,7 +106,6 @@ interface GrowthContextType {
 const GrowthContext = createContext<GrowthContextType | undefined>(undefined);
 
 export function GrowthProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [socialMetrics, setSocialMetrics] = useState<SocialMetric[]>([]);
   const [suggestions, setSuggestions] = useState<ContentSuggestion[]>([]);
@@ -117,40 +113,25 @@ export function GrowthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) {
-      setLeads([]);
-      setSocialMetrics([]);
-      setSuggestions([]);
-      setPostPerformance([]);
-      setLoading(false);
-      return;
-    }
-
     const leadsQ = query(
       collection(db, "leads"),
-      where("userId", "==", user.uid)
+      orderBy("createdAt", "desc")
     );
 
     const socialQ = query(
       collection(db, "social_metrics"),
-      where("userId", "==", user.uid),
       orderBy("date", "desc")
     );
 
-    const suggestionsQ = query(
-      collection(db, "content_suggestions"),
-      where("userId", "==", user.uid)
-    );
+    const suggestionsQ = collection(db, "content_suggestions");
 
     const performanceQ = query(
       collection(db, "post_performance"),
-      where("userId", "==", user.uid),
       orderBy("date", "desc")
     );
 
     const unsubLeads = onSnapshot(leadsQ, (snapshot) => {
       const newLeads = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Lead);
-      newLeads.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setLeads(newLeads);
     });
 
@@ -173,15 +154,13 @@ export function GrowthProvider({ children }: { children: React.ReactNode }) {
       unsubSuggestions();
       unsubPerformance();
     };
-  }, [user]);
+  }, []);
 
   const updateSocialMetrics = async (metrics: Omit<SocialMetric, "id" | "date">) => {
-    if (!user) return;
     const now = new Date().toISOString();
     try {
       await addDoc(collection(db, "social_metrics"), {
         ...metrics,
-        userId: user.uid,
         date: now
       });
     } catch (error) {
@@ -190,14 +169,11 @@ export function GrowthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const createLead = async (
-    data: Omit<Lead, "id" | "userId" | "createdAt" | "updatedAt">,
+    data: Omit<Lead, "id" | "createdAt" | "updatedAt">,
   ) => {
-    if (!user) throw new Error("Not authenticated");
-
     const now = new Date().toISOString();
     const leadData = {
       ...data,
-      userId: user.uid,
       createdAt: now,
       updatedAt: now,
       score: data.score || "Não avaliado",
@@ -225,7 +201,6 @@ export function GrowthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateLead = async (id: string, data: Partial<Lead>) => {
-    if (!user) return;
     const leadRef = doc(db, "leads", id);
     const updatePayload: any = { ...data, updatedAt: new Date().toISOString() };
     
@@ -242,7 +217,6 @@ export function GrowthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteLead = async (id: string) => {
-    if (!user) return;
     try {
       await deleteDoc(doc(db, "leads", id));
     } catch (error) {
@@ -251,7 +225,6 @@ export function GrowthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addInteraction = async (leadId: string, interaction: Omit<Interaction, "id" | "date">) => {
-    if (!user) return;
     const lead = leads.find(l => l.id === leadId);
     if (!lead) return;
 

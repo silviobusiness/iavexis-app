@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
-import { useAuth } from './AuthContext';
 
 export type FeedbackType = 'positive' | 'negative' | 'text';
 
@@ -22,17 +21,15 @@ interface FeedbackContextType {
 const FeedbackContext = createContext<FeedbackContextType | undefined>(undefined);
 
 export function FeedbackProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const submitFeedback = async (data: FeedbackData) => {
-    if (!user) return;
     setIsSubmitting(true);
     try {
       await addDoc(collection(db, 'feedback'), {
         ...data,
-        userId: user.uid,
-        userEmail: user.email,
+        userId: 'guest-user',
+        userEmail: 'convidado@iavexis.com',
         createdAt: new Date().toISOString(),
         timestamp: serverTimestamp(),
       });

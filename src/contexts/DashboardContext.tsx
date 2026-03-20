@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Task, DashboardEvent, Activity, Goal, BannerArt, BannerSettings, Project, ProjectStatus, GrowthMetrics, Lead, LeadStatus, CreativeTask } from '../types';
 import { format, isToday, isYesterday, parseISO, startOfToday } from 'date-fns';
-import { doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
-import { db, auth } from '../firebase';
-import { handleFirestoreError, OperationType, useAuth } from './AuthContext';
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { db } from '../firebase';
+import { handleFirestoreError, OperationType } from '../utils/firestoreUtils';
+import { useAuth } from './AuthContext';
 
 interface DashboardContextType {
   tasks: Task[];
@@ -149,21 +150,9 @@ export const DashboardProvider = ({ children }: { children: ReactNode }) => {
 
   // Firestore Sync for Banner
   useEffect(() => {
-    if (!user) return;
-
-    const userRef = doc(db, 'users', user.uid);
-    const unsubscribe = onSnapshot(userRef, (doc) => {
-      if (doc.exists()) {
-        const data = doc.data();
-        if (data.bannerArts) setBannerArtsState(data.bannerArts);
-        if (data.bannerSettings) setBannerSettingsState(data.bannerSettings);
-      }
-    }, (error) => {
-      handleFirestoreError(error, OperationType.GET, `users/${user.uid}`);
-    });
-
-    return () => unsubscribe();
-  }, [user]);
+    // No longer syncing with Firebase Auth
+    return () => {};
+  }, []);
 
   // Save data to localStorage
   useEffect(() => {
@@ -350,32 +339,10 @@ export const DashboardProvider = ({ children }: { children: ReactNode }) => {
 
   const setBannerArts = async (arts: BannerArt[]) => {
     setBannerArtsState(arts);
-    if (auth.currentUser) {
-      const userRef = doc(db, 'users', auth.currentUser.uid);
-      try {
-        await setDoc(userRef, {
-          bannerArts: arts,
-          updatedAt: new Date().toISOString()
-        }, { merge: true });
-      } catch (error) {
-        handleFirestoreError(error, OperationType.UPDATE, `users/${auth.currentUser.uid}`);
-      }
-    }
   };
 
   const setBannerSettings = async (settings: BannerSettings) => {
     setBannerSettingsState(settings);
-    if (auth.currentUser) {
-      const userRef = doc(db, 'users', auth.currentUser.uid);
-      try {
-        await setDoc(userRef, {
-          bannerSettings: settings,
-          updatedAt: new Date().toISOString()
-        }, { merge: true });
-      } catch (error) {
-        handleFirestoreError(error, OperationType.UPDATE, `users/${auth.currentUser.uid}`);
-      }
-    }
   };
 
   const syncData = async () => {

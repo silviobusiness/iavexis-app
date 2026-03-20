@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ThumbsUp, ThumbsDown, Copy, BookmarkPlus, Zap, Image as ImageIcon, Search, MessageSquare, ExternalLink, ArrowRight, RefreshCw, Pin, Sparkles, ChevronDown, ChevronUp, Check, Download, Share2, Plus, Calendar } from 'lucide-react';
 import clsx from 'clsx';
-import { doc, updateDoc, addDoc, collection } from 'firebase/firestore';
+import { doc, updateDoc, collection } from 'firebase/firestore';
 import { db } from '../firebase';
-import { useAuth } from '../contexts/AuthContext';
 import { useChat } from '../contexts/ChatContext';
 import { useLibrary } from '../contexts/LibraryContext';
 import { useDashboard } from '../contexts/DashboardContext';
@@ -283,8 +282,7 @@ export const MessageBubble: React.FC<{
   onExtractPrompt?: (text: string) => void
 }> = ({ message, onInsertText, onExtractPrompt }) => {
   const isUser = message.role === 'user';
-  const { user } = useAuth();
-  const { toggleMessagePin, remixMessage, sendMessage } = useChat();
+  const { toggleMessagePin, remixMessage } = useChat();
   const { createItem } = useLibrary();
   const { addCreativeTask } = useDashboard();
   const { submitFeedback } = useFeedback();
@@ -370,7 +368,6 @@ export const MessageBubble: React.FC<{
   };
 
   const handleSaveImage = async (url: string) => {
-    if (!user) return;
     try {
       await createItem({
         category: 'Imagens',
@@ -386,7 +383,6 @@ export const MessageBubble: React.FC<{
   };
 
   const handleSaveLink = async (url: string, title: string) => {
-    if (!user) return;
     try {
       await createItem({
         category: 'Links',
@@ -435,7 +431,6 @@ export const MessageBubble: React.FC<{
   };
 
   const handleSavePrompt = async (title: string, content: string) => {
-    if (!user) return;
     try {
       await createItem({
         title,
@@ -518,7 +513,7 @@ export const MessageBubble: React.FC<{
   }, [selectionMenu]);
 
   const saveToLibrary = async () => {
-    if (!selectionMenu || !user) return;
+    if (!selectionMenu) return;
     try {
       await createItem({
         category: 'Ideia Salva',
@@ -530,7 +525,7 @@ export const MessageBubble: React.FC<{
       setSelectionMenu(null);
       alert('Salvo na biblioteca!');
     } catch (error) {
-      console.error('Error saving to library:', error);
+      console.error('Error saving library item:', error);
     }
   };
 

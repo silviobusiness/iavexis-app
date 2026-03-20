@@ -2,9 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { useAuth } from '../contexts/AuthContext';
 import { useChat } from '../contexts/ChatContext';
-import { Plus, MessageSquare, Folder as FolderIcon, MoreVertical, LogOut, Pin, Trash2, Search, Zap, TrendingUp, ChevronRight, ChevronDown, FolderOpen, LayoutDashboard, Library, Users, PenTool, Edit2, Star, X, Copy, DollarSign, Menu, ChevronLeft } from 'lucide-react';
+import { Plus, MessageSquare, Folder as FolderIcon, MoreVertical, Pin, Trash2, Search, Zap, TrendingUp, ChevronRight, ChevronDown, FolderOpen, LayoutDashboard, Library, Users, PenTool, Edit2, Star, X, Copy, DollarSign, Menu, ChevronLeft } from 'lucide-react';
 import clsx from 'clsx';
 import { ViewType } from './MainLayout';
 import { Tooltip } from './Tooltip';
@@ -30,7 +29,7 @@ export function Sidebar({
   setIsMobileOpen,
   onToggleCollapse
 }: SidebarProps) {
-  const { user, profile, logOut, isAdmin } = useAuth();
+  const isAdmin = true;
   const { chats, folders, activeChatId, setActiveChatId, createChat, deleteChat, updateChat, createFolder, updateFolder, deleteFolder, duplicateFolder } = useChat();
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
@@ -204,7 +203,7 @@ export function Sidebar({
           >
             <div className="relative">
               <img 
-                src={profile?.photoURL || `https://ui-avatars.com/api/?name=${profile?.name}&background=8EB69B&color=051F20`} 
+                src={`https://ui-avatars.com/api/?name=Convidado&background=8EB69B&color=051F20`} 
                 alt="Profile" 
                 className="w-10 h-10 rounded-full object-cover border border-zinc-700 group-hover:border-emerald-500/50 transition-all duration-300 shadow-lg"
               />
@@ -240,16 +239,8 @@ export function Sidebar({
                 )}
               >
                 <div className="mb-4">
-                  <h2 className="text-sm font-semibold text-zinc-200 truncate">{profile?.name}</h2>
-                  <p className="text-xs text-zinc-500 truncate">{profile?.email}</p>
+                  <h2 className="text-sm font-semibold text-zinc-200 truncate">Usuário Convidado</h2>
                 </div>
-                <button 
-                  onClick={logOut} 
-                  className="w-full flex items-center gap-2 px-3 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-sm font-medium transition-all interactive-hover interactive-click"
-                >
-                  <LogOut className="w-4 h-4" />
-                  Sair da conta
-                </button>
               </motion.div>
             )}
           </AnimatePresence>
