@@ -11,8 +11,12 @@ export const auth = getAuth(app);
 
 async function testConnection() {
   try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
+    const docRef = doc(db, 'test', 'connection');
+    console.log("Testing connection to Firestore at path:", docRef.path);
+    await getDocFromServer(docRef);
+    console.log("Firestore connection successful!");
   } catch (error) {
+    console.error("Firestore connection test failed:", error);
     if(error instanceof Error && (error.message.includes('the client is offline') || error.message.includes('Missing or insufficient permissions'))) {
       console.error("Please check your Firebase configuration or internet connection. Your browser might be blocking the connection to Firestore (e.g., via an ad blocker or firewall).");
     }

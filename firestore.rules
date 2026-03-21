@@ -16,15 +16,13 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isAuthenticated() && 
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-         (request.auth.token.email == "ievexisapp@gmail.com" && request.auth.token.email_verified == true));
+      return isAuthenticated() && request.auth.token.email == "ievexisapp@gmail.com";
     }
 
     function isDocOwner() {
       return isAuthenticated() && 
-        ((resource != null && request.auth.uid == resource.data.userId) ||
-         (resource == null && request.auth.uid == request.resource.data.userId));
+        ((resource != null && (request.auth.uid == resource.data.userId || request.auth.uid == resource.data.uid)) ||
+         (resource == null && (request.auth.uid == request.resource.data.userId || request.auth.uid == request.resource.data.uid)));
     }
 
     function hasRequiredFields(fields) {
@@ -141,72 +139,44 @@ service cloud.firestore {
     }
     
     match /users/{userId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isOwner(userId);
-      allow update: if isOwner(userId) || isAdmin();
-      allow delete: if isAdmin();
+      allow read: if true;
+      allow write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
     }
     
     match /chats/{chatId} {
-      allow read: if isDocOwner() || isAdmin();
-      allow create: if isDocOwner();
-      allow update: if isDocOwner() || isAdmin();
-      allow delete: if isDocOwner() || isAdmin();
+      allow read, write: if isAuthenticated() && (isDocOwner() || isAdmin());
     }
     
     match /messages/{messageId} {
-      allow read: if isDocOwner() || isAdmin();
-      allow create: if isDocOwner();
-      allow update: if isDocOwner() || isAdmin();
-      allow delete: if isDocOwner() || isAdmin();
+      allow read, write: if isAuthenticated() && (isDocOwner() || isAdmin());
     }
     
     match /folders/{folderId} {
-      allow read: if isDocOwner() || isAdmin();
-      allow create: if isDocOwner();
-      allow update: if isDocOwner() || isAdmin();
-      allow delete: if isDocOwner() || isAdmin();
+      allow read, write: if isAuthenticated() && (isDocOwner() || isAdmin());
     }
     
     match /libraryItems/{itemId} {
-      allow read: if isDocOwner() || isAdmin();
-      allow create: if isDocOwner();
-      allow update: if isDocOwner() || isAdmin();
-      allow delete: if isDocOwner() || isAdmin();
+      allow read, write: if isAuthenticated() && (isDocOwner() || isAdmin());
     }
     
     match /leads/{leadId} {
-      allow read: if isDocOwner() || isAdmin();
-      allow create: if isDocOwner();
-      allow update: if isDocOwner() || isAdmin();
-      allow delete: if isDocOwner() || isAdmin();
+      allow read, write: if isAuthenticated() && (isDocOwner() || isAdmin());
     }
 
     match /social_metrics/{metricId} {
-      allow read: if isDocOwner() || isAdmin();
-      allow create: if isDocOwner();
-      allow update: if isDocOwner() || isAdmin();
-      allow delete: if isDocOwner() || isAdmin();
+      allow read, write: if isAuthenticated() && (isDocOwner() || isAdmin());
     }
 
     match /content_suggestions/{suggestionId} {
-      allow read: if isDocOwner() || isAdmin();
-      allow create: if isDocOwner();
-      allow update: if isDocOwner() || isAdmin();
-      allow delete: if isDocOwner() || isAdmin();
+      allow read, write: if isAuthenticated() && (isDocOwner() || isAdmin());
     }
 
     match /post_performance/{performanceId} {
-      allow read: if isDocOwner() || isAdmin();
-      allow create: if isDocOwner();
-      allow update: if isDocOwner() || isAdmin();
-      allow delete: if isDocOwner() || isAdmin();
+      allow read, write: if isAuthenticated() && (isDocOwner() || isAdmin());
     }
 
     match /feedback/{feedbackId} {
-      allow read: if isAdmin();
-      allow create: if isAuthenticated();
-      allow update, delete: if isAdmin();
+      allow read, write: if isAuthenticated() && (isDocOwner() || isAdmin());
     }
   }
 }
