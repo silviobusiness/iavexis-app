@@ -1,13 +1,39 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import { getFirestore, doc, getDocFromServer, enableIndexedDbPersistence, terminate, clearIndexedDbPersistence } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
-import { getAuth } from 'firebase/auth';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import firebaseConfig from '../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+
+// Enable offline persistence
+if (typeof window !== 'undefined') {
+  enableIndexedDbPersistence(db).catch((err) => {
+    if (err.code === 'failed-precondition') {
+      console.warn('Multiple tabs open, persistence can only be enabled in one tab at a time.');
+    } else if (err.code === 'unimplemented') {
+      console.warn('The current browser does not support all of the features required to enable persistence');
+    }
+  });
+}
+
 export const storage = getStorage(app);
 export const auth = getAuth(app);
+
+// Connectivity monitoring
+export const monitorConnectivity = (onStatusChange: (online: boolean) => void) => {
+  const handleOnline = () => onStatusChange(true);
+  const handleOffline = () => onStatusChange(false);
+
+  window.addEventListener('online', handleOnline);
+  window.addEventListener('offline', handleOffline);
+
+  return () => {
+    window.removeEventListener('online', handleOnline);
+    window.removeEventListener('offline', handleOffline);
+  };
+};
 
 async function testConnection() {
   try {

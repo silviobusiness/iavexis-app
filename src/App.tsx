@@ -10,10 +10,12 @@ import { AuthProvider } from './contexts/AuthContext';
 import { MainLayout } from './components/MainLayout';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CustomCursor } from './components/CustomCursor';
+import { ConnectivityMonitor } from './components/ConnectivityMonitor';
 
 function AppContent() {
   return (
     <ErrorBoundary>
+      <ConnectivityMonitor />
       <CustomCursor />
       <AuthProvider>
         <DashboardProvider>
