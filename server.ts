@@ -14,14 +14,22 @@ async function startServer() {
   const PORT = 3000;
 
   // WebSocket Server setup
-  const wss = new WebSocketServer({ 
-    server,
-    path: '/ws-custom' // Use a specific path to avoid conflicts with Vite HMR
-  });
+  const wss = new WebSocketServer({ noServer: true });
 
   // Handle errors on the WebSocket server itself
   wss.on('error', (error) => {
     console.error('WebSocket Server error:', error);
+  });
+
+  server.on('upgrade', (request, socket, head) => {
+    const { pathname } = new URL(request.url || '', `http://${request.headers.host}`);
+
+    if (pathname === '/ws-custom') {
+      wss.handleUpgrade(request, socket, head, (ws) => {
+        wss.emit('connection', ws, request);
+      });
+    }
+    // Vite's middleware will handle its own upgrades if we don't intercept them
   });
 
   wss.on('connection', (ws, req) => {

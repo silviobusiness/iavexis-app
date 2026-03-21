@@ -9,11 +9,16 @@ export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 
 // Enable offline persistence
 if (typeof window !== 'undefined') {
-  enableIndexedDbPersistence(db).catch((err) => {
+  console.log("Firestore: Enabling persistence...");
+  enableIndexedDbPersistence(db).then(() => {
+    console.log("Firestore: Persistence enabled successfully.");
+  }).catch((err) => {
     if (err.code === 'failed-precondition') {
-      console.warn('Multiple tabs open, persistence can only be enabled in one tab at a time.');
+      console.warn('Firestore: Multiple tabs open, persistence can only be enabled in one tab at a time.');
     } else if (err.code === 'unimplemented') {
-      console.warn('The current browser does not support all of the features required to enable persistence');
+      console.warn('Firestore: The current browser does not support all of the features required to enable persistence');
+    } else {
+      console.error('Firestore: Error enabling persistence:', err);
     }
   });
 }

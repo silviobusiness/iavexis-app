@@ -60,7 +60,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [error, setErrorState] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log("AuthProvider: Initializing onAuthStateChanged...");
+    
+    // Fail-safe timeout: if loading is still true after 10 seconds, force it to false
+    const loadingTimeout = setTimeout(() => {
+      if (loading) {
+        console.warn("AuthProvider: Initialization timeout reached. Forcing loading to false.");
+        setLoading(false);
+      }
+    }, 10000);
+
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      console.log("AuthProvider: onAuthStateChanged fired. User:", currentUser?.uid || "null");
       try {
         if (currentUser) {
           setManualLogout(false);
@@ -68,11 +79,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           
           // Fetch or create profile
           const userDocRef = doc(db, 'users', currentUser.uid);
-          const userDoc = await getDoc(userDocRef);
+          console.log("AuthProvider: Fetching profile for", currentUser.uid);
+          
+          // Use a timeout for the Firestore call
+          const profilePromise = getDoc(userDocRef);
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("Firestore timeout")), 5000)
+          );
+
+          const userDoc = await Promise.race([profilePromise, timeoutPromise]) as any;
           
           if (userDoc.exists()) {
+            console.log("AuthProvider: Profile found");
             setProfile(userDoc.data() as UserProfile);
           } else {
+            console.log("AuthProvider: Profile not found, creating new one");
             const newProfile: UserProfile = {
               uid: currentUser.uid,
               name: 'Designer',
@@ -92,13 +113,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (err: any) {
         console.error("Error in AuthProvider initialization:", err);
+        // If it's a timeout or network error, we still want to let the user in as a guest or with limited profile
         setErrorState(err.message || "Erro ao inicializar autenticação.");
       } finally {
+        console.log("AuthProvider: Initialization complete, setting loading to false");
         setLoading(false);
+        clearTimeout(loadingTimeout);
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      clearTimeout(loadingTimeout);
+    };
   }, [manualLogout]);
 
   const updateProfile = async (data: Partial<UserProfile>) => {
