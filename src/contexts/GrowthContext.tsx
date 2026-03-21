@@ -126,6 +126,10 @@ export function GrowthProvider({ children }: { children: React.ReactNode }) {
     }, 10000);
 
     if (!user) {
+      setLeads([]);
+      setSocialMetrics([]);
+      setSuggestions([]);
+      setPostPerformance([]);
       setLoading(false);
       return;
     }

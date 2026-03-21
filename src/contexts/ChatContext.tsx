@@ -77,7 +77,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setChats([]);
+      setFolders([]);
+      setActiveChatId(null);
+      return;
+    }
     const chatsQuery = query(
       collection(db, 'chats'),
       where('userId', '==', user.uid)

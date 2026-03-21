@@ -1,6 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
-import { Tldraw, Editor, createShapeId, AssetRecordType } from 'tldraw';
-import 'tldraw/tldraw.css';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useLibrary } from '../contexts/LibraryContext';
 import { 
   Search, 
@@ -19,7 +17,10 @@ import {
   Palette,
   MousePointer2,
   Plus,
-  Trello
+  Trello,
+  Download,
+  Eraser,
+  Pencil
 } from 'lucide-react';
 import { ProjectKanban } from './ProjectKanban';
 import clsx from 'clsx';
@@ -31,20 +32,97 @@ export function CreativeLocker() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState<SidebarTab>('library');
-  const [selectedShapes, setSelectedShapes] = useState<any[]>([]);
   const [zoomLevel, setZoomLevel] = useState(1);
-  const editorRef = useRef<Editor | null>(null);
+  const [brushColor, setBrushColor] = useState('#00FF00');
+  const [brushSize, setBrushSize] = useState(5);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [tool, setTool] = useState<'pencil' | 'eraser'>('pencil');
+  
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const contextRef = useRef<CanvasRenderingContext2D | null>(null);
 
-  const handleMount = useCallback((editor: Editor) => {
-    editorRef.current = editor;
-    
-    // Listen for changes using the standard on('change') event
-    editor.on('change', () => {
-      const selected = editor.getSelectedShapes();
-      setSelectedShapes(selected);
-      setZoomLevel(editor.getZoomLevel());
-    });
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    // Set canvas size to match container
+    const rect = canvas.parentElement?.getBoundingClientRect();
+    if (rect) {
+      canvas.width = rect.width * 2; // High DPI
+      canvas.height = rect.height * 2;
+      canvas.style.width = `${rect.width}px`;
+      canvas.style.height = `${rect.height}px`;
+    }
+
+    const context = canvas.getContext('2d');
+    if (context) {
+      context.scale(2, 2);
+      context.lineCap = 'round';
+      context.strokeStyle = brushColor;
+      context.lineWidth = brushSize;
+      contextRef.current = context;
+      
+      // Fill background
+      context.fillStyle = '#0B0B0B';
+      context.fillRect(0, 0, canvas.width, canvas.height);
+    }
   }, []);
+
+  useEffect(() => {
+    if (contextRef.current) {
+      contextRef.current.strokeStyle = tool === 'eraser' ? '#0B0B0B' : brushColor;
+      contextRef.current.lineWidth = brushSize;
+    }
+  }, [brushColor, brushSize, tool]);
+
+  const startDrawing = ({ nativeEvent }: React.MouseEvent | React.TouchEvent) => {
+    const { offsetX, offsetY } = getCoordinates(nativeEvent);
+    contextRef.current?.beginPath();
+    contextRef.current?.moveTo(offsetX, offsetY);
+    setIsDrawing(true);
+  };
+
+  const draw = ({ nativeEvent }: React.MouseEvent | React.TouchEvent) => {
+    if (!isDrawing) return;
+    const { offsetX, offsetY } = getCoordinates(nativeEvent);
+    contextRef.current?.lineTo(offsetX, offsetY);
+    contextRef.current?.stroke();
+  };
+
+  const stopDrawing = () => {
+    contextRef.current?.closePath();
+    setIsDrawing(false);
+  };
+
+  const getCoordinates = (event: any) => {
+    if (event.touches && event.touches[0]) {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      return {
+        offsetX: event.touches[0].clientX - (rect?.left || 0),
+        offsetY: event.touches[0].clientY - (rect?.top || 0)
+      };
+    }
+    return {
+      offsetX: event.offsetX,
+      offsetY: event.offsetY
+    };
+  };
+
+  const clearCanvas = () => {
+    if (contextRef.current && canvasRef.current) {
+      contextRef.current.fillStyle = '#0B0B0B';
+      contextRef.current.fillRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+    }
+  };
+
+  const downloadCanvas = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const link = document.createElement('a');
+    link.download = 'iavexis-sketch.png';
+    link.href = canvas.toDataURL();
+    link.click();
+  };
 
   const filteredItems = items.filter(item => {
     const searchLower = searchQuery.toLowerCase();
@@ -56,99 +134,20 @@ export function CreativeLocker() {
   });
 
   const addImageToCanvas = (url: string, title: string) => {
-    if (!editorRef.current) return;
-    const editor = editorRef.current;
-
-    const assetId = AssetRecordType.createId();
-    
-    editor.createAssets([
-      {
-        id: assetId,
-        type: 'image',
-        typeName: 'asset',
-        props: {
-          name: title,
-          src: url,
-          w: 400,
-          h: 400,
-          mimeType: 'image/png',
-          isAnimated: false,
-        },
-        meta: {},
-      } as any,
-    ]);
-
-    editor.createShape({
-      type: 'image',
-      x: editor.getViewportPageBounds().center.x - 200,
-      y: editor.getViewportPageBounds().center.y - 200,
-      props: {
-        assetId,
-        w: 400,
-        h: 400,
-      },
-    } as any);
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.src = url;
+    img.onload = () => {
+      contextRef.current?.drawImage(img, 50, 50, 200, 200);
+    };
   };
 
   const addText = () => {
-    if (!editorRef.current) return;
-    const editor = editorRef.current;
-    editor.createShape({
-      type: 'text',
-      x: editor.getViewportPageBounds().center.x - 100,
-      y: editor.getViewportPageBounds().center.y - 20,
-      props: {
-        text: 'Novo Texto',
-      },
-    } as any);
-  };
-
-  const addShape = (type: 'geo', geo: 'rectangle' | 'ellipse' | 'triangle' | 'star') => {
-    if (!editorRef.current) return;
-    const editor = editorRef.current;
-    editor.createShape({
-      type,
-      x: editor.getViewportPageBounds().center.x - 50,
-      y: editor.getViewportPageBounds().center.y - 50,
-      props: {
-        geo,
-        w: 100,
-        h: 100,
-        color: 'black',
-        fill: 'none',
-      },
-    } as any);
-  };
-
-  const deleteSelected = () => {
-    if (!editorRef.current) return;
-    editorRef.current.deleteShapes(editorRef.current.getSelectedShapeIds());
-  };
-
-  const duplicateSelected = () => {
-    if (!editorRef.current) return;
-    editorRef.current.duplicateShapes(editorRef.current.getSelectedShapeIds());
-  };
-
-  const moveForward = () => {
-    if (!editorRef.current) return;
-    editorRef.current.bringToFront(editorRef.current.getSelectedShapeIds());
-  };
-
-  const moveBackward = () => {
-    if (!editorRef.current) return;
-    editorRef.current.sendToBack(editorRef.current.getSelectedShapeIds());
-  };
-
-  const changeColor = (color: string) => {
-    if (!editorRef.current) return;
-    editorRef.current.updateShapes(
-      editorRef.current.getSelectedShapes().map(s => ({
-        id: s.id,
-        type: s.type,
-        props: { ...s.props, color }
-      })) as any
-    );
+    if (contextRef.current) {
+      contextRef.current.font = '24px Anton';
+      contextRef.current.fillStyle = brushColor;
+      contextRef.current.fillText('Novo Texto', 100, 100);
+    }
   };
 
   return (
@@ -162,94 +161,68 @@ export function CreativeLocker() {
           <span className="text-sm font-bold text-zinc-100">Vestiário Criativo</span>
         </div>
 
-        {activeTab === 'projects' ? (
-          <div className="flex-1 flex items-center justify-between">
-            <div className="text-xs text-zinc-500 font-medium italic">
-              Gerencie seus projetos e prazos esportivos
-            </div>
-          </div>
-        ) : selectedShapes.length > 0 ? (
-          <div className="flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="flex-1 flex items-center justify-between">
+          <div className="flex items-center gap-4">
             <div className="flex items-center gap-1 bg-zinc-800 p-1 rounded-md">
               <button 
-                onClick={deleteSelected}
-                className="p-1.5 hover:bg-red-500/20 hover:text-red-400 text-zinc-400 rounded-md transition-colors" 
-                title="Deletar"
+                onClick={() => setTool('pencil')}
+                className={clsx(
+                  "p-1.5 rounded-md transition-colors",
+                  tool === 'pencil' ? "bg-emerald-500 text-zinc-950" : "text-zinc-400 hover:bg-zinc-700"
+                )}
+                title="Lápis"
               >
-                <Trash2 className="w-4 h-4" />
+                <Pencil className="w-4 h-4" />
               </button>
               <button 
-                onClick={duplicateSelected}
-                className="p-1.5 hover:bg-zinc-700 text-zinc-400 rounded-md transition-colors" 
-                title="Duplicar"
+                onClick={() => setTool('eraser')}
+                className={clsx(
+                  "p-1.5 rounded-md transition-colors",
+                  tool === 'eraser' ? "bg-emerald-500 text-zinc-950" : "text-zinc-400 hover:bg-zinc-700"
+                )}
+                title="Borracha"
               >
-                <Copy className="w-4 h-4" />
+                <Eraser className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="h-6 w-px bg-zinc-800 mx-1" />
-
-            <div className="flex items-center gap-1 bg-zinc-800 p-1 rounded-md">
-              <button 
-                onClick={moveForward}
-                className="p-1.5 hover:bg-zinc-700 text-zinc-400 rounded-md transition-colors" 
-                title="Trazer para frente"
-              >
-                <ArrowUp className="w-4 h-4" />
-              </button>
-              <button 
-                onClick={moveBackward}
-                className="p-1.5 hover:bg-zinc-700 text-zinc-400 rounded-md transition-colors" 
-                title="Enviar para trás"
-              >
-                <ArrowDown className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="h-6 w-px bg-zinc-800 mx-1" />
-
-            <div className="flex items-center gap-2 bg-zinc-800 p-1 rounded-md overflow-x-auto max-w-[400px] no-scrollbar">
-              {['black', 'grey', 'light-grey', 'white', 'blue', 'light-blue', 'turquoise', 'green', 'light-green', 'yellow', 'orange', 'red', 'light-red', 'pink', 'light-pink', 'violet', 'light-violet'].map(color => (
-                <button
-                  key={color}
-                  onClick={() => changeColor(color)}
-                  className={clsx(
-                    "w-5 h-5 rounded-full border border-zinc-700 transition-transform hover:scale-110 shrink-0",
-                    `bg-tl-${color}`
-                  )}
-                  title={color}
-                />
-              ))}
+            <div className="flex items-center gap-2 bg-zinc-800 p-1 rounded-md">
+              <input 
+                type="color" 
+                value={brushColor} 
+                onChange={(e) => setBrushColor(e.target.value)}
+                className="w-6 h-6 rounded bg-transparent border-none cursor-pointer"
+              />
+              <input 
+                type="range" 
+                min="1" 
+                max="50" 
+                value={brushSize} 
+                onChange={(e) => setBrushSize(parseInt(e.target.value))}
+                className="w-24 accent-emerald-500"
+              />
+              <span className="text-[10px] font-mono text-zinc-500 w-6">{brushSize}px</span>
             </div>
           </div>
-        ) : (
-          <div className="flex-1 flex items-center justify-between">
-            <div className="text-xs text-zinc-500 font-medium italic">
-              Selecione um elemento para ver as opções
-            </div>
+
+          <div className="flex items-center gap-2">
             <button 
-              onClick={() => {
-                if (window.confirm('Deseja limpar todo o quadro?')) {
-                  editorRef.current?.selectAll().deleteShapes(editorRef.current.getSelectedShapeIds());
-                }
-              }}
+              onClick={clearCanvas}
               className="text-xs font-bold text-zinc-500 hover:text-red-400 transition-colors flex items-center gap-2"
             >
               <Trash2 className="w-3 h-3" />
-              Limpar Quadro
+              Limpar
             </button>
-            <div className="h-6 w-px bg-zinc-800 mx-4" />
+            <div className="h-6 w-px bg-zinc-800 mx-2" />
             <button 
-              onClick={() => {
-                // Tldraw export logic would go here, for now we'll just show a message
-                alert('Funcionalidade de exportação (PNG/SVG) será integrada em breve!');
-              }}
+              onClick={downloadCanvas}
               className="px-4 py-1.5 bg-neon-gradient text-zinc-950 text-xs font-bold rounded-md hover:opacity-90 transition-all flex items-center gap-2"
             >
+              <Download className="w-3 h-3" />
               Baixar Arte
             </button>
           </div>
-        )}
+        </div>
       </div>
 
       <div className="flex-1 flex relative overflow-hidden">
@@ -330,7 +303,7 @@ export function CreativeLocker() {
                     {['#00FF00', '#000000', '#FFFFFF', '#1A1A1A', '#333333', '#888888', '#EAEAEA', '#FF4444'].map(color => (
                       <button
                         key={color}
-                        onClick={() => changeColor(color)}
+                        onClick={() => setBrushColor(color)}
                         className="aspect-square rounded-md border border-zinc-800 transition-transform hover:scale-110"
                         style={{ backgroundColor: color }}
                         title={color}
@@ -396,15 +369,8 @@ export function CreativeLocker() {
                   {filteredItems.map(item => (
                     <button
                       key={item.id}
-                      draggable
-                      onDragStart={(e) => {
-                        if (item.imageUrl) {
-                          e.dataTransfer.setData('text/uri-list', item.imageUrl);
-                          e.dataTransfer.setData('text/plain', item.imageUrl);
-                        }
-                      }}
                       onClick={() => item.imageUrl && addImageToCanvas(item.imageUrl, item.title)}
-                      className="bg-zinc-950 border border-zinc-800 rounded-md overflow-hidden group hover:border-emerald-500/50 transition-all text-left cursor-grab active:cursor-grabbing"
+                      className="bg-zinc-950 border border-zinc-800 rounded-md overflow-hidden group hover:border-emerald-500/50 transition-all text-left"
                     >
                       <div className="aspect-square relative flex items-center justify-center bg-zinc-900/50 p-2">
                         {item.imageUrl ? (
@@ -440,7 +406,6 @@ export function CreativeLocker() {
                     ].map((shape, i) => (
                       <button
                         key={i}
-                        onClick={() => addShape('geo', shape.geo as any)}
                         className="aspect-square bg-zinc-950 border border-zinc-800 rounded-md flex items-center justify-center hover:border-emerald-500/50 transition-all text-zinc-400 hover:text-emerald-400"
                       >
                         <shape.icon className="w-6 h-6" />
@@ -496,22 +461,29 @@ export function CreativeLocker() {
         </div>
 
         {/* Main Canvas Area */}
-        <div className="flex-1 relative h-full creative-locker-canvas">
+        <div className="flex-1 relative h-full creative-locker-canvas overflow-hidden">
           {activeTab === 'projects' ? (
             <div className="h-full p-6 overflow-y-auto custom-scrollbar bg-[#0B0B0B]">
               <ProjectKanban />
             </div>
           ) : (
-            <>
-              <Tldraw 
-                persistenceKey="creative-locker-board-v2" 
-                onMount={handleMount}
+            <div className="w-full h-full bg-[#0B0B0B] cursor-crosshair relative">
+              <canvas
+                ref={canvasRef}
+                onMouseDown={startDrawing}
+                onMouseMove={draw}
+                onMouseUp={stopDrawing}
+                onMouseLeave={stopDrawing}
+                onTouchStart={startDrawing}
+                onTouchMove={draw}
+                onTouchEnd={stopDrawing}
+                className="touch-none"
               />
               
-              {/* Zoom Controls */}
+              {/* Zoom Controls (Simplified) */}
               <div className="absolute bottom-6 right-6 z-50 flex items-center gap-2 bg-zinc-900 border border-zinc-800 p-1.5 rounded-lg shadow-2xl">
                 <button 
-                  onClick={() => editorRef.current?.zoomOut()}
+                  onClick={() => setZoomLevel(prev => Math.max(0.1, prev - 0.1))}
                   className="p-1.5 hover:bg-zinc-800 text-zinc-400 rounded-lg transition-colors"
                 >
                   <ChevronLeft className="w-4 h-4" />
@@ -520,13 +492,13 @@ export function CreativeLocker() {
                   {Math.round(zoomLevel * 100)}%
                 </span>
                 <button 
-                  onClick={() => editorRef.current?.zoomIn()}
+                  onClick={() => setZoomLevel(prev => Math.min(5, prev + 0.1))}
                   className="p-1.5 hover:bg-zinc-800 text-zinc-400 rounded-lg transition-colors"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
-            </>
+            </div>
           )}
           
           {/* Toggle Sidebar Button (when closed) */}

@@ -44,7 +44,10 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<LibraryItem[]>([]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setItems([]);
+      return;
+    }
     const q = query(
       collection(db, 'libraryItems'),
       where('userId', '==', user.uid)
