@@ -8,9 +8,11 @@ import {
   updateDoc,
   doc,
   deleteDoc,
+  where,
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { handleFirestoreError, OperationType } from "../utils/firestoreUtils";
+import { useAuth } from "./AuthContext";
 
 export type LeadType = "cliente" | "influenciador" | "parceiro";
 export type LeadStatus = "novo_lead" | "contato_iniciado" | "proposta_enviada" | "negociacao" | "aguardando_resposta" | "fechado";
@@ -106,6 +108,7 @@ interface GrowthContextType {
 const GrowthContext = createContext<GrowthContextType | undefined>(undefined);
 
 export function GrowthProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [socialMetrics, setSocialMetrics] = useState<SocialMetric[]>([]);
   const [suggestions, setSuggestions] = useState<ContentSuggestion[]>([]);
@@ -113,20 +116,28 @@ export function GrowthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!user) return;
+
     const leadsQ = query(
       collection(db, "leads"),
+      where("userId", "==", user.uid),
       orderBy("createdAt", "desc")
     );
 
     const socialQ = query(
       collection(db, "social_metrics"),
+      where("userId", "==", user.uid),
       orderBy("date", "desc")
     );
 
-    const suggestionsQ = collection(db, "content_suggestions");
+    const suggestionsQ = query(
+      collection(db, "content_suggestions"),
+      where("userId", "==", user.uid)
+    );
 
     const performanceQ = query(
       collection(db, "post_performance"),
+      where("userId", "==", user.uid),
       orderBy("date", "desc")
     );
 
@@ -154,13 +165,14 @@ export function GrowthProvider({ children }: { children: React.ReactNode }) {
       unsubSuggestions();
       unsubPerformance();
     };
-  }, []);
+  }, [user]);
 
   const updateSocialMetrics = async (metrics: Omit<SocialMetric, "id" | "date">) => {
     const now = new Date().toISOString();
     try {
       await addDoc(collection(db, "social_metrics"), {
         ...metrics,
+        userId: user?.uid || 'guest-user',
         date: now
       });
     } catch (error) {
@@ -174,6 +186,7 @@ export function GrowthProvider({ children }: { children: React.ReactNode }) {
     const now = new Date().toISOString();
     const leadData = {
       ...data,
+      userId: user?.uid || 'guest-user',
       createdAt: now,
       updatedAt: now,
       score: data.score || "Não avaliado",

@@ -22,8 +22,8 @@ import { useLibrary } from '../contexts/LibraryContext';
 
 export function ChatArea({ onToggleLibrary, isLibraryOpen }: { onToggleLibrary: () => void, isLibraryOpen: boolean }) {
   const { activeChatId, chats } = useChat();
-  const profile = { name: 'Usuário Convidado', email: 'convidado@iavexis.com', photoURL: '' };
-  const userId = 'guest-user';
+  const { user, profile } = useAuth();
+  const userId = user?.uid || 'guest-user';
   const { shortcuts, setIsHelpOpen } = useShortcuts();
   const { createItem } = useLibrary();
   const [isLoading, setIsLoading] = useState(true);

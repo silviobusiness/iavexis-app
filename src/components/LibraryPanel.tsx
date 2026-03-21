@@ -1,33 +1,19 @@
-import { useState, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
+import { useState } from 'react';
+import { deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { X, Search, Bookmark, Trash2 } from 'lucide-react';
+import { useLibrary } from '../contexts/LibraryContext';
 
 export function LibraryPanel({ onClose }: { onClose: () => void }) {
-  const [items, setItems] = useState<any[]>([]);
+  const { items } = useLibrary();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-
-  useEffect(() => {
-    const q = query(
-      collection(db, 'libraryItems'),
-      orderBy('createdAt', 'desc')
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setItems(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    }, (error) => {
-      console.error('Library snapshot error:', error);
-    });
-
-    return () => unsubscribe();
-  }, []);
 
   const categories = Array.from(new Set(items.map(item => item.category)));
 
   const filteredItems = items.filter(item => 
     (activeCategory ? item.category === activeCategory : true) &&
-    (item.title.toLowerCase().includes(searchQuery.toLowerCase()) || item.content.toLowerCase().includes(searchQuery.toLowerCase()))
+    (item.title.toLowerCase().includes(searchQuery.toLowerCase()) || (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase())))
   );
 
   const handleDelete = async (id: string) => {
@@ -98,7 +84,7 @@ export function LibraryPanel({ onClose }: { onClose: () => void }) {
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
-              <p className="text-xs text-zinc-400 line-clamp-3">{item.content}</p>
+              <p className="text-xs text-zinc-400 line-clamp-3">{item.description}</p>
               <div className="mt-3 flex justify-between items-center">
                 <span className="text-[10px] font-medium uppercase tracking-wider text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-sm">
                   {item.category}

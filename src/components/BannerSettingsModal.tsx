@@ -5,6 +5,7 @@ import { useDashboard } from '../contexts/DashboardContext';
 import { BannerArt, BannerSettings } from '../types';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { storage } from '../firebase';
+import { useAuth } from '../contexts/AuthContext';
 import clsx from 'clsx';
 
 interface BannerSettingsModalProps {
@@ -12,6 +13,7 @@ interface BannerSettingsModalProps {
 }
 
 export function BannerSettingsModal({ onClose }: BannerSettingsModalProps) {
+  const { user } = useAuth();
   const { bannerArts, setBannerArts, bannerSettings, setBannerSettings } = useDashboard();
   const [localBannerArts, setLocalBannerArts] = useState<BannerArt[]>(bannerArts);
   const [localBannerSettings, setLocalBannerSettings] = useState<BannerSettings>(bannerSettings);
@@ -38,7 +40,7 @@ export function BannerSettingsModal({ onClose }: BannerSettingsModalProps) {
 
     try {
       const artId = Math.random().toString(36).substr(2, 9);
-      const storageRef = ref(storage, `banners/guest-user/${artId}_${file.name}`);
+      const storageRef = ref(storage, `banners/${user?.uid || 'guest-user'}/${artId}_${file.name}`);
       
       const uploadTask = uploadBytesResumable(storageRef, file);
       

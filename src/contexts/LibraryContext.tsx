@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { collection, query, onSnapshot, addDoc, updateDoc, doc, deleteDoc } from 'firebase/firestore';
+import { collection, query, onSnapshot, addDoc, updateDoc, doc, deleteDoc, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import { handleFirestoreError, OperationType } from '../utils/firestoreUtils';
+import { useAuth } from './AuthContext';
 
 export interface LibraryItem {
   id: string;
@@ -39,11 +40,14 @@ interface LibraryContextType {
 const LibraryContext = createContext<LibraryContextType | undefined>(undefined);
 
 export function LibraryProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
   const [items, setItems] = useState<LibraryItem[]>([]);
 
   useEffect(() => {
+    if (!user) return;
     const q = query(
-      collection(db, 'libraryItems')
+      collection(db, 'libraryItems'),
+      where('userId', '==', user.uid)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -56,12 +60,12 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [user]);
 
   const createItem = async (itemData: Partial<LibraryItem>) => {
     const now = new Date().toISOString();
     const newItem: any = {
-      userId: 'guest-user',
+      userId: user?.uid || 'guest-user',
       title: itemData.title || 'Untitled Asset',
       category: itemData.category || 'Uncategorized',
       folderId: itemData.folderId || null,

@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { collection, query, onSnapshot, orderBy, addDoc, updateDoc, doc, deleteDoc, serverTimestamp, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import { handleFirestoreError, OperationType } from '../utils/firestoreUtils';
+import { useAuth } from './AuthContext';
 
 export interface Chat {
   id: string;
@@ -70,13 +71,16 @@ interface ChatContextType {
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
   const [chats, setChats] = useState<Chat[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!user) return;
     const chatsQuery = query(
-      collection(db, 'chats')
+      collection(db, 'chats'),
+      where('userId', '==', user.uid)
     );
 
     const unsubscribeChats = onSnapshot(chatsQuery, (snapshot) => {
@@ -89,7 +93,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     });
 
     const foldersQuery = query(
-      collection(db, 'folders')
+      collection(db, 'folders'),
+      where('userId', '==', user.uid)
     );
 
     const unsubscribeFolders = onSnapshot(foldersQuery, (snapshot) => {
@@ -105,12 +110,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       unsubscribeChats();
       unsubscribeFolders();
     };
-  }, []);
+  }, [user]);
 
   const createChat = async (title = 'Novo Chat', isProject = false) => {
     const now = new Date().toISOString();
     const chatData = {
-      userId: 'guest-user',
+      userId: user?.uid || 'guest-user',
       title,
       isPinned: false,
       isFavorite: false,
@@ -151,7 +156,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const createFolder = async (name: string, parentId: string | null = null) => {
     try {
       await addDoc(collection(db, 'folders'), {
-        userId: 'guest-user',
+        userId: user?.uid || 'guest-user',
         name,
         parentId,
         createdAt: new Date().toISOString(),
@@ -175,7 +180,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       await updateDoc(doc(db, 'folders', id), {
         deleted: true,
         deletedAt: new Date().toISOString(),
-        deletedBy: 'guest-user',
+        deletedBy: user?.uid || 'guest-user',
       });
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `folders/${id}`);
@@ -217,7 +222,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       if (!folderToDuplicate) return;
 
       const newFolderData = {
-        userId: 'guest-user',
+        userId: user?.uid || 'guest-user',
         name: `${folderToDuplicate.name} (Cópia)`,
         parentId: parentId !== null ? parentId : folderToDuplicate.parentId,
         color: folderToDuplicate.color || null,
@@ -232,7 +237,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       const chatsInFolder = chats.filter(c => c.folderId === id);
       for (const chat of chatsInFolder) {
         const newChatData = {
-          userId: 'guest-user',
+          userId: user?.uid || 'guest-user',
           title: `${chat.title} (Cópia)`,
           folderId: newFolderRef.id,
           isPinned: false,
@@ -267,7 +272,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     try {
       const userMessageData: any = {
         chatId: targetChatId,
-        userId: 'guest-user',
+        userId: user?.uid || 'guest-user',
         role: 'user',
         content: text,
         feedback: 'none',
@@ -315,7 +320,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       try {
         await addDoc(collection(db, 'messages'), {
           chatId: targetChatId,
-          userId: 'guest-user',
+          userId: user?.uid || 'guest-user',
           role: 'assistant',
           content: aiText,
           feedback: 'none',
@@ -330,7 +335,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       console.error('Error sending message:', error);
       await addDoc(collection(db, 'messages'), {
         chatId: targetChatId,
-        userId: 'guest-user',
+        userId: user?.uid || 'guest-user',
         role: 'assistant',
         content: `❌ Erro: ${error.message || 'Ocorreu um erro ao processar sua mensagem. Por favor, tente novamente.'}`,
         feedback: 'none',

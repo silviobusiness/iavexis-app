@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Search, Upload, Heart, Download, Eye, X, Image as ImageIcon, Link as LinkIcon, ExternalLink } from 'lucide-react';
 import { useLibrary, LibraryItem } from '../contexts/LibraryContext';
 import { useChat } from '../contexts/ChatContext';
+import { useAuth } from '../contexts/AuthContext';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { storage } from '../firebase';
 import clsx from 'clsx';
@@ -596,6 +597,7 @@ function PreviewModal({ item, onClose, onDownload, onToggleFavorite, onUseAsBase
 }
 
 function UploadModal({ onClose, onSubmit, viewMode = 'assets' }: { onClose: () => void, onSubmit: (data: Partial<LibraryItem>) => void, viewMode?: 'assets' | 'references' | 'vestiario' }) {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     title: '',
     category: CATEGORIES[0],
@@ -644,7 +646,7 @@ function UploadModal({ onClose, onSubmit, viewMode = 'assets' }: { onClose: () =
       if (selectedFile) {
         const fileExt = selectedFile.name.split('.').pop();
         const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-        const storageRef = ref(storage, `library/guest-user/${fileName}`);
+        const storageRef = ref(storage, `library/${user?.uid || 'guest-user'}/${fileName}`);
         
         const uploadTask = uploadBytesResumable(storageRef, selectedFile);
         finalImageUrl = await new Promise<string>((resolve, reject) => {
