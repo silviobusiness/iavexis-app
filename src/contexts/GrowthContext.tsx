@@ -103,6 +103,7 @@ interface GrowthContextType {
   deleteLead: (id: string) => Promise<void>;
   addInteraction: (leadId: string, interaction: Omit<Interaction, "id" | "date">) => Promise<void>;
   updateSocialMetrics: (metrics: Omit<SocialMetric, "id" | "date">) => Promise<void>;
+  createSuggestion: (data: Omit<ContentSuggestion, "id">) => Promise<void>;
 }
 
 const GrowthContext = createContext<GrowthContextType | undefined>(undefined);
@@ -264,6 +265,18 @@ export function GrowthProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  const createSuggestion = async (data: Omit<ContentSuggestion, "id">) => {
+    try {
+      await addDoc(collection(db, "content_suggestions"), {
+        ...data,
+        userId: user?.uid || 'guest-user',
+        createdAt: new Date().toISOString()
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, "content_suggestions");
+    }
+  };
+
   return (
     <GrowthContext.Provider
       value={{ 
@@ -276,7 +289,8 @@ export function GrowthProvider({ children }: { children: React.ReactNode }) {
         updateLead, 
         deleteLead, 
         addInteraction,
-        updateSocialMetrics
+        updateSocialMetrics,
+        createSuggestion
       }}
     >
       {children}

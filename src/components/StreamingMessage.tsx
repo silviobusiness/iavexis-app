@@ -27,8 +27,10 @@ export const StreamingMessage: React.FC<StreamingMessageProps> = ({
   const hasCompleted = useRef(false);
 
   useEffect(() => {
+    const cleanContent = content.replace(/\[CREATE_SUGGESTION:\s*({.*?})\]/s, '').trim();
+    
     if (isInstant) {
-      setDisplayedContent(content);
+      setDisplayedContent(cleanContent);
       if (isDone && !hasCompleted.current) {
         hasCompleted.current = true;
         onComplete(content);
@@ -36,6 +38,7 @@ export const StreamingMessage: React.FC<StreamingMessageProps> = ({
       return;
     }
 
+    const words = cleanContent.split(/(\s+)/);
     const typeNextWord = () => {
       if (wordIndex.current >= words.length) {
         setIsTyping(false);

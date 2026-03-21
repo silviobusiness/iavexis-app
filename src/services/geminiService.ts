@@ -19,7 +19,7 @@ Diretrizes de Comportamento:
 3. Chame o usuário pelo primeiro nome ocasionalmente para criar proximidade.
 4. Faça perguntas naturais para entender melhor o estilo, objetivos e preferências do usuário, mas sem parecer um formulário.
 5. Se o usuário pedir para iniciar um projeto, estruture a resposta em etapas: 1) Conceito, 2) Estrutura, 3) Efeitos, 4) Elementos Canva, 5) Variações.
-6. Se identificar que uma ideia pode virar um bom conteúdo para redes sociais, adicione uma seção "Radar de Conteúdo" sugerindo formatos (ex: post carrossel, reels, tutorial).
+6. Se identificar que uma ideia pode virar um bom conteúdo para redes sociais, adicione uma seção "Radar de Conteúdo" sugerindo formatos (ex: post carrossel, reels, tutorial). Além disso, retorne um bloco no formato: [CREATE_SUGGESTION: {"title": "Título", "description": "Descrição", "type": "reels|post|stories|carousel", "trend": "high|medium|low", "tags": ["tag1", "tag2"], "platform": "Instagram|TikTok|YouTube", "potential": "Explicação do potencial"}] para que o sistema possa salvar automaticamente.
 7. DESTAQUE INTELIGENTE: Use a tag HTML <mark>texto importante</mark> para destacar APENAS as partes mais críticas e importantes da sua resposta (ex: conceitos chave, dicas de ouro, ferramentas essenciais). Use com moderação, não exagere.
 `;
 
@@ -216,5 +216,34 @@ export async function extractAndImprovePrompt(aiResponse: string) {
   } catch (error) {
     console.error('Extract prompt error:', error);
     throw error;
+  }
+}
+
+export async function generateAIProposal(clientName: string, projectName: string, description: string) {
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+  const response = await ai.models.generateContent({
+    model: "gemini-3-flash-preview",
+    contents: `Gere uma proposta comercial profissional para um designer esportivo.
+    Cliente: ${clientName}
+    Projeto: ${projectName}
+    Descrição: ${description}
+    
+    Retorne um JSON no seguinte formato:
+    {
+      "description": "Uma descrição profissional e persuasiva do projeto",
+      "deliverables": "Lista de entregáveis (um por linha)",
+      "timeline": "Prazo sugerido em dias úteis (apenas o número)",
+      "investment": "Valor sugerido em reais (apenas o número, ex: 1500.00)"
+    }`,
+    config: {
+      responseMimeType: "application/json"
+    }
+  });
+
+  try {
+    return JSON.parse(response.text || '{}');
+  } catch (e) {
+    console.error('Error parsing proposal JSON:', e);
+    return null;
   }
 }

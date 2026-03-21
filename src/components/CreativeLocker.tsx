@@ -24,7 +24,7 @@ import {
 import { ProjectKanban } from './ProjectKanban';
 import clsx from 'clsx';
 
-type SidebarTab = 'library' | 'elements' | 'uploads' | 'text' | 'templates' | 'projects';
+type SidebarTab = 'library' | 'elements' | 'uploads' | 'text' | 'templates' | 'projects' | 'brand';
 
 export function CreativeLocker() {
   const { items } = useLibrary();
@@ -257,6 +257,7 @@ export function CreativeLocker() {
         <div className="w-16 bg-zinc-950 border-r border-zinc-900 flex flex-col items-center py-4 gap-4 z-50">
           {[
             { id: 'projects', icon: Trello, label: 'Projetos' },
+            { id: 'brand', icon: Palette, label: 'Marca' },
             { id: 'templates', icon: Layout, label: 'Modelos' },
             { id: 'elements', icon: Square, label: 'Elementos' },
             { id: 'library', icon: ImageIcon, label: 'Biblioteca' },
@@ -319,6 +320,47 @@ export function CreativeLocker() {
                     O quadro completo está visível à direita.
                   </p>
                 </div>
+              </div>
+            )}
+            {activeTab === 'brand' && (
+              <div className="p-4 space-y-6">
+                <section>
+                  <h4 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3">Cores da Marca</h4>
+                  <div className="grid grid-cols-4 gap-2">
+                    {['#00FF00', '#000000', '#FFFFFF', '#1A1A1A', '#333333', '#888888', '#EAEAEA', '#FF4444'].map(color => (
+                      <button
+                        key={color}
+                        onClick={() => changeColor(color)}
+                        className="aspect-square rounded-md border border-zinc-800 transition-transform hover:scale-110"
+                        style={{ backgroundColor: color }}
+                        title={color}
+                      />
+                    ))}
+                    <button className="aspect-square rounded-md border border-dashed border-zinc-800 flex items-center justify-center text-zinc-600 hover:text-zinc-400 hover:border-zinc-600 transition-all">
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
+                </section>
+
+                <section>
+                  <h4 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3">Tipografia</h4>
+                  <div className="space-y-2">
+                    {[
+                      { name: 'Anton', weight: 'Bold' },
+                      { name: 'Inter', weight: 'Regular' },
+                      { name: 'JetBrains Mono', weight: 'Medium' }
+                    ].map(font => (
+                      <button
+                        key={font.name}
+                        onClick={addText}
+                        className="w-full p-3 bg-zinc-950 border border-zinc-800 rounded-md text-left hover:border-emerald-500/30 transition-all group"
+                      >
+                        <div className="text-sm font-bold text-white group-hover:text-emerald-400">{font.name}</div>
+                        <div className="text-[10px] text-zinc-500">{font.weight}</div>
+                      </button>
+                    ))}
+                  </div>
+                </section>
               </div>
             )}
             {activeTab === 'library' && (

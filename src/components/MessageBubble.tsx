@@ -299,6 +299,9 @@ export const MessageBubble: React.FC<{
   const { displayContent, detectedPrompt, imagePrompt, detectedLinks, referenceImages } = !isUser ? (() => {
     let content = message.content;
     
+    // Hide CREATE_SUGGESTION blocks
+    content = content.replace(/\[CREATE_SUGGESTION:\s*({.*?})\]/s, '').trim();
+
     // Detect prompts
     const codeBlockRegex = /```(?:[\w]*\n)?([\s\S]*?)```/g;
     const matches = [...content.matchAll(codeBlockRegex)];

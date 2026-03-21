@@ -58,6 +58,8 @@ export function LinkAccountModal({ isOpen, onClose, initialMode = 'link' }: Link
         setError('A senha deve ter pelo menos 6 caracteres.');
       } else if (err.code === 'auth/invalid-email') {
         setError('E-mail inválido.');
+      } else if (err.code === 'auth/unauthorized-domain') {
+        setError('Este domínio não está autorizado no Firebase. Por favor, adicione as URLs do Cloud Run aos domínios autorizados no Console do Firebase.');
       } else {
         setError(`Ocorreu um erro ao ${mode === 'link' ? 'salvar a conta' : 'fazer login'}. Tente novamente.`);
       }

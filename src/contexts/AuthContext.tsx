@@ -14,6 +14,7 @@ import {
   sendPasswordResetEmail
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { handleFirestoreError, OperationType } from '../utils/firestoreUtils';
 
 interface UserProfile {
   uid: string;
@@ -87,9 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } catch (error) {
           console.error("Error fetching/creating profile:", error);
           // Use our utility for more details
-          import('../utils/firestoreUtils').then(({ handleFirestoreError, OperationType }) => {
-            handleFirestoreError(error, OperationType.GET, `users/${currentUser.uid}`);
-          });
+          handleFirestoreError(error, OperationType.GET, `users/${currentUser.uid}`);
         }
         setLoading(false);
       } else {
@@ -112,9 +111,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setProfile(prev => prev ? { ...prev, ...data } : null);
     } catch (error) {
       console.error("Error updating profile:", error);
-      import('../utils/firestoreUtils').then(({ handleFirestoreError, OperationType }) => {
-        handleFirestoreError(error, OperationType.UPDATE, `users/${user.uid}`);
-      });
+      handleFirestoreError(error, OperationType.UPDATE, `users/${user.uid}`);
     }
   };
 

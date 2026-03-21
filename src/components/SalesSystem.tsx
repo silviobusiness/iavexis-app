@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { DollarSign, Users, FileText, Calculator, Plus, MoreVertical, Download, X, Edit2, Trash2 } from 'lucide-react';
+import { DollarSign, Users, FileText, Calculator, Plus, MoreVertical, Download, X, Edit2, Trash2, Sparkles, Loader2 } from 'lucide-react';
 import clsx from 'clsx';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { useDashboard } from '../contexts/DashboardContext';
 import { Lead, LeadStatus } from '../types';
+import { generateAIProposal } from '../services/geminiService';
 
 const COLUMNS: { id: LeadStatus; title: string; color: string }[] = [
   { id: 'contato', title: 'Contato Inicial', color: 'bg-zinc-500' },
@@ -52,6 +53,8 @@ export function SalesSystem() {
     investment: ''
   });
 
+  const [isGeneratingProposal, setIsGeneratingProposal] = useState(false);
+
   const calculateTotal = () => {
     const h = Number(hours) || 0;
     const r = Number(hourlyRate) || 0;
@@ -95,6 +98,36 @@ export function SalesSystem() {
   const handleDeleteLead = (id: string) => {
     if (window.confirm('Tem certeza que deseja excluir este lead?')) {
       deleteLead(id);
+    }
+  };
+
+  const handleGenerateAIProposal = async () => {
+    if (!proposalData.clientName || !proposalData.projectName || !proposalData.description) {
+      alert('Por favor, preencha o nome do cliente, projeto e descrição para gerar a proposta com IA.');
+      return;
+    }
+
+    setIsGeneratingProposal(true);
+    try {
+      const result = await generateAIProposal(
+        proposalData.clientName,
+        proposalData.projectName,
+        proposalData.description
+      );
+
+      if (result) {
+        setProposalData(prev => ({
+          ...prev,
+          description: result.description || prev.description,
+          deliverables: result.deliverables || prev.deliverables,
+          timeline: result.timeline || prev.timeline,
+          investment: result.investment || prev.investment
+        }));
+      }
+    } catch (error) {
+      console.error('Error generating AI proposal:', error);
+    } finally {
+      setIsGeneratingProposal(false);
     }
   };
 
@@ -408,7 +441,21 @@ export function SalesSystem() {
           <div className="h-full overflow-y-auto p-4 relative z-10">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-7xl mx-auto">
               <div className="premium-card p-6 shadow-xl">
-                <h3 className="text-xl font-bold text-[#EAEAEA] mb-6">Dados da Proposta</h3>
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-bold text-[#EAEAEA]">Dados da Proposta</h3>
+                  <button
+                    onClick={handleGenerateAIProposal}
+                    disabled={isGeneratingProposal}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-[#00FF00]/10 text-[#00FF00] border border-[#00FF00]/30 rounded-[6px] text-xs font-bold hover:bg-[#00FF00]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isGeneratingProposal ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="w-3.5 h-3.5" />
+                    )}
+                    Gerar com IA
+                  </button>
+                </div>
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-[#888888]">Nome do Cliente</label>

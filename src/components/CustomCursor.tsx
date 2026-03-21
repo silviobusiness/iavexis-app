@@ -43,13 +43,14 @@ export function CustomCursor() {
         target.closest('.interactive-item') ||
         target.closest('.sidebar-item-premium');
 
+      let newType: 'default' | 'pointer' | 'interactive' = 'default';
       if (isPointer) {
-        setCursorType('pointer');
+        newType = 'pointer';
       } else if (isInteractive) {
-        setCursorType('interactive');
-      } else {
-        setCursorType('default');
+        newType = 'interactive';
       }
+
+      setCursorType(prev => prev !== newType ? newType : prev);
     };
 
     const handleMouseLeave = () => setIsVisible(false);

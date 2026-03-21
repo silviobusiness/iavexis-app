@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { handleFirestoreError, OperationType } from '../utils/firestoreUtils';
 import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Send, Image as ImageIcon, Mic, Wand2, Library, Paperclip, X, MessageSquare, Search, ChevronUp, ChevronDown, WholeWord, CaseSensitive, Zap, Sparkles } from 'lucide-react';
+import { Send, Image as ImageIcon, Mic, Wand2, Library, Paperclip, X, MessageSquare, Search, ChevronUp, ChevronDown, WholeWord, CaseSensitive, Zap, Sparkles, Loader2 } from 'lucide-react';
 import clsx from 'clsx';
 import { MessageBubble } from './MessageBubble';
 import { PremiumChatInput } from './PremiumChatInput';
@@ -19,6 +19,7 @@ import { ShortcutHelpOverlay } from './ShortcutHelpOverlay';
 import { useShortcuts } from '../contexts/ShortcutContext';
 import { copyToClipboard } from '../utils/clipboard';
 import { useLibrary } from '../contexts/LibraryContext';
+import { useGrowth } from '../contexts/GrowthContext';
 
 export function ChatArea({ onToggleLibrary, isLibraryOpen }: { onToggleLibrary: () => void, isLibraryOpen: boolean }) {
   const { activeChatId, chats } = useChat();
@@ -26,6 +27,7 @@ export function ChatArea({ onToggleLibrary, isLibraryOpen }: { onToggleLibrary: 
   const userId = user?.uid || 'guest-user';
   const { shortcuts, setIsHelpOpen } = useShortcuts();
   const { createItem } = useLibrary();
+  const { createSuggestion } = useGrowth();
   const [isLoading, setIsLoading] = useState(true);
   const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState('');
@@ -345,6 +347,19 @@ export function ChatArea({ onToggleLibrary, isLibraryOpen }: { onToggleLibrary: 
   const saveAIMessage = async (content: string, groundingMetadata?: any) => {
     if (!content) return;
     
+    // Detect and extract suggestions
+    const suggestionMatch = content.match(/\[CREATE_SUGGESTION:\s*({.*?})\]/s);
+    if (suggestionMatch) {
+      try {
+        const suggestionData = JSON.parse(suggestionMatch[1]);
+        await createSuggestion(suggestionData);
+        // Clean the content for display
+        content = content.replace(/\[CREATE_SUGGESTION:\s*({.*?})\]/s, '').trim();
+      } catch (e) {
+        console.error('Error parsing suggestion:', e);
+      }
+    }
+
     // Capture metadata and content locally
     const metadata = groundingMetadata || currentGroundingMetadata;
     
@@ -726,6 +741,20 @@ export function ChatArea({ onToggleLibrary, isLibraryOpen }: { onToggleLibrary: 
             }
             rightContent={
               <div className="flex gap-1 pb-1 pr-1">
+                {input.trim() && (
+                  <button 
+                    onClick={handleImprovePrompt}
+                    disabled={isImproving}
+                    className="p-2 text-zinc-500 hover:text-[#00FF00] hover:bg-white/5 rounded-[6px] transition-all interactive-hover interactive-click"
+                    title="Melhorar Prompt"
+                  >
+                    {isImproving ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Wand2 className="w-5 h-5" />
+                    )}
+                  </button>
+                )}
                 <button 
                   onClick={toggleRecording}
                   className={clsx(
