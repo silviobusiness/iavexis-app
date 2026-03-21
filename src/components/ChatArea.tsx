@@ -226,7 +226,7 @@ export function ChatArea({ onToggleLibrary, isLibraryOpen }: { onToggleLibrary: 
       setMessages(msgs);
       setIsLoading(false);
     }, (error) => {
-      console.error('Messages snapshot error:', error);
+      handleFirestoreError(error, OperationType.GET, 'messages');
       setIsLoading(false);
     });
 

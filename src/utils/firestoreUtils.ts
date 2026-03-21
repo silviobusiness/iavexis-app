@@ -1,3 +1,5 @@
+import { auth } from '../firebase';
+
 export enum OperationType {
   CREATE = 'create',
   UPDATE = 'update',
@@ -27,8 +29,33 @@ export interface FirestoreErrorInfo {
 }
 
 export function handleFirestoreError(error: any, operationType: OperationType, path: string | null) {
-  // Since auth is gone, we can't get auth info.
-  // Just log the error.
-  console.error('Firestore Error: ', error);
-  throw error;
+  const currentUser = auth.currentUser;
+  
+  // If user is not logged in, ignore the error as it's likely a race condition during logout
+  if (!currentUser) {
+    console.warn(`Firestore ${operationType} on ${path} failed, but user is not logged in. Ignoring.`);
+    return;
+  }
+
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: currentUser.uid,
+      email: currentUser.email || '',
+      emailVerified: currentUser.emailVerified,
+      isAnonymous: currentUser.isAnonymous,
+      tenantId: currentUser.tenantId || '',
+      providerInfo: currentUser.providerData.map(provider => ({
+        providerId: provider.providerId,
+        displayName: provider.displayName || '',
+        email: provider.email || '',
+        photoUrl: provider.photoURL || ''
+      }))
+    },
+    operationType,
+    path
+  };
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  // Don't throw for permission errors to avoid crashing the app, just log them
+  // throw new Error(JSON.stringify(errInfo));
 }

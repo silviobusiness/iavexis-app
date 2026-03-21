@@ -144,18 +144,27 @@ export function GrowthProvider({ children }: { children: React.ReactNode }) {
     const unsubLeads = onSnapshot(leadsQ, (snapshot) => {
       const newLeads = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Lead);
       setLeads(newLeads);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, "leads");
     });
 
     const unsubSocial = onSnapshot(socialQ, (snapshot) => {
       setSocialMetrics(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as SocialMetric));
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, "social_metrics");
     });
 
     const unsubSuggestions = onSnapshot(suggestionsQ, (snapshot) => {
       setSuggestions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as ContentSuggestion));
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, "content_suggestions");
     });
 
     const unsubPerformance = onSnapshot(performanceQ, (snapshot) => {
       setPostPerformance(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as PostPerformance));
+      setLoading(false);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, "post_performance");
       setLoading(false);
     });
 

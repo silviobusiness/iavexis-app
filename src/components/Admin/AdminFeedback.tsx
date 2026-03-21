@@ -8,6 +8,8 @@ import {
   where
 } from 'firebase/firestore';
 import { db } from '../../firebase';
+import { useAuth } from '../../contexts/AuthContext';
+import { handleFirestoreError, OperationType } from '../../utils/firestoreUtils';
 import { 
   BarChart, 
   Bar, 
@@ -57,6 +59,7 @@ interface Feedback {
 const COLORS = ['#10b981', '#ef4444', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899'];
 
 export function AdminFeedback() {
+  const { user, isAdmin } = useAuth();
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<string>('all');
@@ -64,6 +67,11 @@ export function AdminFeedback() {
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
+    if (!user || !isAdmin) {
+      if (user && !isAdmin) setLoading(false);
+      return;
+    }
+
     const q = query(collection(db, 'feedback'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({
@@ -72,10 +80,25 @@ export function AdminFeedback() {
       })) as Feedback[];
       setFeedbacks(data);
       setLoading(false);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'feedback');
+      setLoading(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [user, isAdmin]);
+
+  if (!isAdmin && !loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+        <AlertTriangle className="w-12 h-12 text-red-500 mb-4" />
+        <h2 className="text-2xl font-bold text-white mb-2">Acesso Negado</h2>
+        <p className="text-zinc-400 max-w-md">
+          Você não tem permissão para acessar esta área. Se você é um administrador, certifique-se de estar logado com a conta correta.
+        </p>
+      </div>
+    );
+  }
 
   const stats = useMemo(() => {
     const total = feedbacks.length;

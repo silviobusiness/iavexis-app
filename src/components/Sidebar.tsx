@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useChat } from '../contexts/ChatContext';
-import { Plus, MessageSquare, Folder as FolderIcon, MoreVertical, Pin, Trash2, Search, Zap, TrendingUp, ChevronRight, ChevronDown, FolderOpen, LayoutDashboard, Library, Users, PenTool, Edit2, Star, X, Copy, DollarSign, Menu, ChevronLeft } from 'lucide-react';
+import { Plus, MessageSquare, Folder as FolderIcon, MoreVertical, Pin, Trash2, Search, Zap, TrendingUp, ChevronRight, ChevronDown, FolderOpen, LayoutDashboard, Library, Users, PenTool, Edit2, Star, X, Copy, DollarSign, Menu, ChevronLeft, LogOut } from 'lucide-react';
 import clsx from 'clsx';
 import { ViewType } from './MainLayout';
 import { Tooltip } from './Tooltip';
@@ -31,13 +31,14 @@ export function Sidebar({
   setIsMobileOpen,
   onToggleCollapse
 }: SidebarProps) {
-  const { user, profile } = useAuth();
+  const { user, profile, logout } = useAuth();
   const isAdmin = profile?.role === 'admin';
   const { chats, folders, activeChatId, setActiveChatId, createChat, deleteChat, updateChat, createFolder, updateFolder, deleteFolder, duplicateFolder } = useChat();
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'link' | 'login'>('link');
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>(() => {
     const saved = localStorage.getItem('expandedFolders');
     return saved ? JSON.parse(saved) : {};
@@ -201,25 +202,43 @@ export function Sidebar({
           "p-4 border-b border-zinc-800 flex items-center bg-zinc-950/30 relative",
           isCollapsed ? "flex-col gap-4 justify-center" : "justify-between"
         )} ref={profileMenuRef}>
-          <div 
-            className="flex items-center gap-3 group cursor-pointer"
-            onClick={() => setIsProfileOpen(!isProfileOpen)}
-          >
-            <div className="relative">
-              <img 
-                src={profile?.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile?.name || 'Convidado')}&background=8EB69B&color=051F20`} 
-                alt="Profile" 
-                className="w-10 h-10 rounded-full object-cover border border-zinc-700 group-hover:border-emerald-500/50 transition-all duration-300 shadow-lg"
-              />
-              <div className="absolute inset-0 rounded-full bg-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity blur-md" />
-            </div>
-            {!isCollapsed && (
-              <div className="flex items-center gap-1">
-                <span className="text-xs text-zinc-500 font-medium">Perfil</span>
-                <ChevronDown className={clsx("w-3 h-3 text-zinc-500 transition-transform", isProfileOpen && "rotate-180")} />
+          {user ? (
+            <div 
+              className="flex items-center gap-3 group cursor-pointer"
+              onClick={() => setIsProfileOpen(!isProfileOpen)}
+            >
+              <div className="relative">
+                <img 
+                  src={profile?.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile?.name || 'Convidado')}&background=8EB69B&color=051F20`} 
+                  alt="Profile" 
+                  className="w-10 h-10 rounded-full object-cover border border-zinc-700 group-hover:border-emerald-500/50 transition-all duration-300 shadow-lg"
+                />
+                <div className="absolute inset-0 rounded-full bg-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity blur-md" />
               </div>
-            )}
-          </div>
+              {!isCollapsed && (
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-zinc-500 font-medium">Perfil</span>
+                  <ChevronDown className={clsx("w-3 h-3 text-zinc-500 transition-transform", isProfileOpen && "rotate-180")} />
+                </div>
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                setAuthModalMode('login');
+                setIsLinkModalOpen(true);
+              }}
+              className={clsx(
+                "flex items-center gap-3 group cursor-pointer text-zinc-400 hover:text-white transition-colors",
+                isCollapsed && "justify-center w-full"
+              )}
+            >
+              <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center border border-zinc-700 group-hover:border-emerald-500/50 transition-all">
+                <Users className="w-5 h-5" />
+              </div>
+              {!isCollapsed && <span className="text-sm font-medium">Entrar</span>}
+            </button>
+          )}
 
           <button
             onClick={onToggleCollapse}
@@ -232,7 +251,7 @@ export function Sidebar({
           </button>
 
           <AnimatePresence>
-            {isProfileOpen && (
+            {isProfileOpen && user && (
               <motion.div
                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -247,11 +266,12 @@ export function Sidebar({
                   <p className="text-xs text-zinc-500 truncate mt-0.5">{profile?.email || 'guest@iavexis.com'}</p>
                 </div>
                 
-                {user?.isAnonymous && (
+                {user.isAnonymous ? (
                   <div className="border-t border-zinc-800 pt-3 mt-3">
                     <button
                       onClick={() => {
                         setIsProfileOpen(false);
+                        setAuthModalMode('link');
                         setIsLinkModalOpen(true);
                       }}
                       className="w-full py-2 px-3 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
@@ -259,9 +279,34 @@ export function Sidebar({
                       <Zap className="w-4 h-4" />
                       Salvar Conta
                     </button>
+                    
+                    <button
+                      onClick={() => {
+                        setIsProfileOpen(false);
+                        setAuthModalMode('login');
+                        setIsLinkModalOpen(true);
+                      }}
+                      className="w-full py-2 px-3 mt-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Entrar em outra conta
+                    </button>
                     <p className="text-[10px] text-zinc-500 text-center mt-2">
                       Crie uma conta para não perder seus dados.
                     </p>
+                  </div>
+                ) : (
+                  <div className="border-t border-zinc-800 pt-3 mt-3">
+                    <button
+                      onClick={() => {
+                        setIsProfileOpen(false);
+                        logout();
+                      }}
+                      className="w-full py-2 px-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Sair
+                    </button>
                   </div>
                 )}
               </motion.div>
@@ -272,6 +317,7 @@ export function Sidebar({
         <LinkAccountModal 
           isOpen={isLinkModalOpen} 
           onClose={() => setIsLinkModalOpen(false)} 
+          initialMode={authModalMode}
         />
 
         {/* Main Navigation */}
