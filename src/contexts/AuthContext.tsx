@@ -199,11 +199,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loginWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
+    console.log("AuthContext: Attempting login with Google popup...");
     try {
       const usercred = await signInWithPopup(auth, provider);
+      console.log("AuthContext: Google login successful. User:", usercred.user.uid);
       setUser(usercred.user);
     } catch (error: any) {
-      console.error("Error logging in with Google:", error);
+      console.error("AuthContext: Error logging in with Google:", error);
+      if (error.code === 'auth/unauthorized-domain') {
+        console.error("AuthContext: Domain unauthorized. Current domain:", window.location.hostname);
+        throw new Error("Este domínio não está autorizado no Firebase. Tente abrir o app em uma nova aba ou verifique se o AdBlocker está bloqueando o popup.");
+      }
       throw error;
     }
   };
