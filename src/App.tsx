@@ -13,20 +13,18 @@ import { CustomCursor } from './components/CustomCursor';
 
 function AppContent() {
   return (
-    <>
+    <ErrorBoundary>
       <CustomCursor />
       <AuthProvider>
         <DashboardProvider>
           <GrowthProvider>
             <FeedbackProvider>
-              <ErrorBoundary>
-                <MainLayout />
-              </ErrorBoundary>
+              <MainLayout />
             </FeedbackProvider>
           </GrowthProvider>
         </DashboardProvider>
       </AuthProvider>
-    </>
+    </ErrorBoundary>
   );
 }
 

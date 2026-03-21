@@ -17,10 +17,12 @@ import { ShortcutProvider } from '../contexts/ShortcutContext';
 import { FeedbackButton } from './Feedback/FeedbackButton';
 import { AdminFeedback } from './Admin/AdminFeedback';
 
+import { useAuth } from '../contexts/AuthContext';
+
 export type ViewType = 'dashboard' | 'chat' | 'library' | 'whiteboard' | 'canvaLab' | 'growth' | 'trash' | 'folder' | 'adminFeedback';
 
 export function MainLayout() {
-  const isAdmin = true;
+  const { isAdmin } = useAuth();
   const [activeView, setActiveView] = useState<ViewType>('dashboard');
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);

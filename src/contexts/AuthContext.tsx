@@ -57,15 +57,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [manualLogout, setManualLogout] = useState(false);
+  const [error, setErrorState] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-        setManualLogout(false);
-        setUser(currentUser);
-        
-        // Fetch or create profile
-        try {
+      try {
+        if (currentUser) {
+          setManualLogout(false);
+          setUser(currentUser);
+          
+          // Fetch or create profile
           const userDocRef = doc(db, 'users', currentUser.uid);
           const userDoc = await getDoc(userDocRef);
           
@@ -85,15 +86,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             });
             setProfile(newProfile);
           }
-        } catch (error) {
-          console.error("Error fetching/creating profile:", error);
-          // Use our utility for more details
-          handleFirestoreError(error, OperationType.GET, `users/${currentUser.uid}`);
+        } else {
+          setUser(null);
+          setProfile(null);
         }
-        setLoading(false);
-      } else {
-        setUser(null);
-        setProfile(null);
+      } catch (err: any) {
+        console.error("Error in AuthProvider initialization:", err);
+        setErrorState(err.message || "Erro ao inicializar autenticação.");
+      } finally {
         setLoading(false);
       }
     });
@@ -199,6 +199,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-zinc-950">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
+          <p className="text-zinc-500 text-sm font-medium animate-pulse">Carregando IAVEXIS...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    throw new Error(error);
+  }
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -213,7 +228,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       resetPassword,
       logout,
     }}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 }

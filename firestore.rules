@@ -25,111 +25,6 @@ service cloud.firestore {
          (resource == null && (request.auth.uid == request.resource.data.userId || request.auth.uid == request.resource.data.uid)));
     }
 
-    function hasRequiredFields(fields) {
-      return request.resource.data.keys().hasAll(fields);
-    }
-    
-    function hasOnlyAllowedFields(fields) {
-      return request.resource.data.keys().hasOnly(fields);
-    }
-    
-    function validStringLength(field, minLen, maxLen) {
-      return request.resource.data[field] is string &&
-        request.resource.data[field].size() >= minLen &&
-        request.resource.data[field].size() <= maxLen;
-    }
-    
-    function isValidEmail(email) {
-      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
-    }
-
-    // ===============================================================
-    // Domain Validators
-    // ===============================================================
-    
-    function isValidUser(data) {
-      return hasRequiredFields(['uid', 'name', 'email', 'createdAt', 'updatedAt']) &&
-             data.name is string && data.name.size() <= 200 &&
-             (data.email == "" || isValidEmail(data.email)) &&
-             data.createdAt is string &&
-             data.updatedAt is string;
-    }
-    
-    function isValidChat(data) {
-      return hasRequiredFields(['userId', 'title', 'createdAt', 'updatedAt']) &&
-             data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
-             data.createdAt is string &&
-             data.updatedAt is string;
-    }
-    
-    function isValidMessage(data) {
-      return hasRequiredFields(['chatId', 'userId', 'role', 'content', 'feedback', 'createdAt']) &&
-             data.chatId is string && data.chatId.size() > 0 && data.chatId.size() <= 100 &&
-             data.role in ['user', 'assistant'] &&
-             data.content is string && data.content.size() <= 100000 &&
-             data.feedback in ['positive', 'negative', 'none'] &&
-             data.createdAt is string;
-    }
-    
-    function isValidFolder(data) {
-      return hasRequiredFields(['userId', 'name', 'createdAt']) &&
-             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
-             data.createdAt is string;
-    }
-    
-    function isValidLibraryItem(data) {
-      return hasRequiredFields(['userId', 'category', 'title', 'createdAt', 'updatedAt']) &&
-             data.category is string && data.category.size() > 0 && data.category.size() <= 100 &&
-             data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
-             data.createdAt is string &&
-             data.updatedAt is string;
-    }
-
-    function isValidLead(data) {
-      return hasRequiredFields(['userId', 'name', 'type', 'serviceType', 'status', 'createdAt', 'updatedAt']) &&
-             data.name is string && data.name.size() > 0 && data.name.size() <= 200 &&
-             data.createdAt is string &&
-             data.updatedAt is string;
-    }
-
-    function isValidSocialMetric(data) {
-      return hasRequiredFields(['userId', 'date', 'followers', 'engagement', 'reach', 'impressions', 'platform', 'change', 'value', 'name']) &&
-             data.date is string &&
-             data.followers is number &&
-             data.engagement is number &&
-             data.reach is number &&
-             data.impressions is number &&
-             data.platform is string &&
-             data.change is number &&
-             data.value is number &&
-             data.name is string;
-    }
-
-    function isValidContentSuggestion(data) {
-      return hasRequiredFields(['userId', 'title', 'description', 'type', 'trend', 'tags', 'platform', 'potential']) &&
-             data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
-             data.description is string && data.description.size() > 0 && data.description.size() <= 1000 &&
-             data.tags is list && data.tags.size() <= 20 &&
-             data.platform is string &&
-             data.potential is string;
-    }
-
-    function isValidPostPerformance(data) {
-      return hasRequiredFields(['userId', 'type', 'reach', 'date', 'thumbnail', 'title', 'engagement', 'platform']) &&
-             data.reach is number &&
-             data.date is string &&
-             data.thumbnail is string &&
-             data.title is string &&
-             data.engagement is map &&
-             data.platform is string;
-    }
-
-    function isValidFeedback(data) {
-      return hasRequiredFields(['userId', 'type', 'createdAt']) &&
-             data.type in ['positive', 'negative', 'text'] &&
-             data.createdAt is string;
-    }
-
     // ===============================================================
     // Rules
     // ===============================================================
@@ -139,71 +34,44 @@ service cloud.firestore {
     }
     
     match /users/{userId} {
-      allow read: if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId) && isValidUser(request.resource.data);
-      allow update: if (isOwner(userId) || isAdmin()) && isValidUser(request.resource.data);
-      allow delete: if isAdmin();
+      allow read, write: if isOwner(userId) || isAdmin();
     }
     
     match /chats/{chatId} {
-      allow read: if isDocOwner() || isAdmin();
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid && isValidChat(request.resource.data);
-      allow update: if (isDocOwner() || isAdmin()) && isValidChat(request.resource.data);
-      allow delete: if isDocOwner() || isAdmin();
+      allow read, write: if isDocOwner() || isAdmin();
     }
     
     match /messages/{messageId} {
-      allow read: if isDocOwner() || isAdmin();
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid && isValidMessage(request.resource.data);
-      allow update: if (isDocOwner() || isAdmin()) && isValidMessage(request.resource.data);
-      allow delete: if isDocOwner() || isAdmin();
+      allow read, write: if isDocOwner() || isAdmin();
     }
     
     match /folders/{folderId} {
-      allow read: if isDocOwner() || isAdmin();
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid && isValidFolder(request.resource.data);
-      allow update: if (isDocOwner() || isAdmin()) && isValidFolder(request.resource.data);
-      allow delete: if isDocOwner() || isAdmin();
+      allow read, write: if isDocOwner() || isAdmin();
     }
     
     match /libraryItems/{itemId} {
-      allow read: if isDocOwner() || isAdmin();
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid && isValidLibraryItem(request.resource.data);
-      allow update: if (isDocOwner() || isAdmin()) && isValidLibraryItem(request.resource.data);
-      allow delete: if isDocOwner() || isAdmin();
+      allow read, write: if isDocOwner() || isAdmin();
     }
     
     match /leads/{leadId} {
-      allow read: if isDocOwner() || isAdmin();
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid && isValidLead(request.resource.data);
-      allow update: if (isDocOwner() || isAdmin()) && isValidLead(request.resource.data);
-      allow delete: if isDocOwner() || isAdmin();
+      allow read, write: if isDocOwner() || isAdmin();
     }
 
     match /social_metrics/{metricId} {
-      allow read: if isDocOwner() || isAdmin();
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid && isValidSocialMetric(request.resource.data);
-      allow update: if (isDocOwner() || isAdmin()) && isValidSocialMetric(request.resource.data);
-      allow delete: if isDocOwner() || isAdmin();
+      allow read, write: if isDocOwner() || isAdmin();
     }
 
     match /content_suggestions/{suggestionId} {
-      allow read: if isDocOwner() || isAdmin();
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid && isValidContentSuggestion(request.resource.data);
-      allow update: if (isDocOwner() || isAdmin()) && isValidContentSuggestion(request.resource.data);
-      allow delete: if isDocOwner() || isAdmin();
+      allow read, write: if isDocOwner() || isAdmin();
     }
 
     match /post_performance/{performanceId} {
-      allow read: if isDocOwner() || isAdmin();
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid && isValidPostPerformance(request.resource.data);
-      allow update: if (isDocOwner() || isAdmin()) && isValidPostPerformance(request.resource.data);
-      allow delete: if isDocOwner() || isAdmin();
+      allow read, write: if isDocOwner() || isAdmin();
     }
 
     match /feedback/{feedbackId} {
       allow read: if isAdmin();
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid && isValidFeedback(request.resource.data);
+      allow create: if isAuthenticated();
       allow update, delete: if isAdmin();
     }
   }
