@@ -117,7 +117,18 @@ export function GrowthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
+    // Fail-safe timeout for loading state
+    const loadingTimeout = setTimeout(() => {
+      if (loading) {
+        console.warn('GrowthContext: Loading timeout reached. Forcing loading to false.');
+        setLoading(false);
+      }
+    }, 10000);
+
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
     const leadsQ = query(
       collection(db, "leads"),
@@ -170,6 +181,7 @@ export function GrowthProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => {
+      clearTimeout(loadingTimeout);
       unsubLeads();
       unsubSocial();
       unsubSuggestions();

@@ -2,7 +2,10 @@ import { GoogleGenAI } from '@google/genai';
 
 // Helper to get AI instance with current API key
 function getAI() {
-  const apiKey = process.env.GEMINI_API_KEY;
+  // On server, use process.env.GEMINI_API_KEY
+  // On client, we should probably not have the key, but if we do (Vite), use it
+  const apiKey = process.env.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY;
+  
   if (!apiKey) {
     throw new Error('Configuração de IA pendente. Por favor, aguarde ou verifique as configurações.');
   }
@@ -24,6 +27,38 @@ Diretrizes de Comportamento:
 `;
 
 export async function generateChatResponse(
+  userMessage: string, 
+  previousMessages: any[], 
+  userProfile: any, 
+  imageFiles?: { base64: string, mimeType: string }[], 
+  isProject: boolean = false
+) {
+  // If we are in the browser, call our own API instead of direct Google API
+  if (typeof window !== 'undefined') {
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userMessage, history: previousMessages, isProject, imageFiles })
+      });
+      
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || 'Erro na resposta do servidor');
+      }
+      
+      return await response.json();
+    } catch (error: any) {
+      console.error('Client Chat Proxy Error:', error);
+      // Fallback to direct SDK if proxy fails (might be local dev or specific env)
+      return await _generateChatResponseDirect(userMessage, previousMessages, userProfile, imageFiles, isProject);
+    }
+  }
+
+  return await _generateChatResponseDirect(userMessage, previousMessages, userProfile, imageFiles, isProject);
+}
+
+async function _generateChatResponseDirect(
   userMessage: string, 
   previousMessages: any[], 
   userProfile: any, 
@@ -93,6 +128,26 @@ export async function generateChatResponse(
 
 export async function autoCorrectText(text: string) {
   if (!text.trim()) return text;
+  
+  if (typeof window !== 'undefined') {
+    try {
+      const response = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'autoCorrect', payload: { text } })
+      });
+      if (!response.ok) throw new Error('Erro no servidor');
+      const data = await response.json();
+      return data.result;
+    } catch (error) {
+      console.error('Client autoCorrect proxy error:', error);
+      return await _autoCorrectTextDirect(text);
+    }
+  }
+  return await _autoCorrectTextDirect(text);
+}
+
+async function _autoCorrectTextDirect(text: string) {
   try {
     const ai = getAI();
     const response = await ai.models.generateContent({
@@ -114,6 +169,25 @@ export async function autoCorrectText(text: string) {
 }
 
 export async function generateImage(prompt: string) {
+  if (typeof window !== 'undefined') {
+    try {
+      const response = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'generateImage', payload: { prompt } })
+      });
+      if (!response.ok) throw new Error('Erro no servidor');
+      const data = await response.json();
+      return data.result;
+    } catch (error) {
+      console.error('Client generateImage proxy error:', error);
+      return await _generateImageDirect(prompt);
+    }
+  }
+  return await _generateImageDirect(prompt);
+}
+
+async function _generateImageDirect(prompt: string) {
   try {
     const ai = getAI();
     const response = await ai.models.generateContent({
@@ -145,6 +219,26 @@ export async function generateImage(prompt: string) {
 
 export async function improvePrompt(prompt: string) {
   if (!prompt.trim()) return prompt;
+  
+  if (typeof window !== 'undefined') {
+    try {
+      const response = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'improvePrompt', payload: { prompt } })
+      });
+      if (!response.ok) throw new Error('Erro no servidor');
+      const data = await response.json();
+      return data.result;
+    } catch (error) {
+      console.error('Client improvePrompt proxy error:', error);
+      return await _improvePromptDirect(prompt);
+    }
+  }
+  return await _improvePromptDirect(prompt);
+}
+
+async function _improvePromptDirect(prompt: string) {
   try {
     const ai = getAI();
     const response = await ai.models.generateContent({
@@ -165,6 +259,27 @@ export async function improvePrompt(prompt: string) {
 }
 
 export async function extractAndImprovePrompt(aiResponse: string) {
+  if (!aiResponse.trim()) throw new Error('Nenhuma resposta disponível para extrair');
+  
+  if (typeof window !== 'undefined') {
+    try {
+      const response = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'extractAndImprove', payload: { aiResponse } })
+      });
+      if (!response.ok) throw new Error('Erro no servidor');
+      const data = await response.json();
+      return data.result;
+    } catch (error) {
+      console.error('Client extractAndImprove proxy error:', error);
+      return await _extractAndImprovePromptDirect(aiResponse);
+    }
+  }
+  return await _extractAndImprovePromptDirect(aiResponse);
+}
+
+async function _extractAndImprovePromptDirect(aiResponse: string) {
   if (!aiResponse.trim()) throw new Error('Nenhuma resposta disponível para extrair');
   try {
     const ai = getAI();
@@ -220,7 +335,26 @@ export async function extractAndImprovePrompt(aiResponse: string) {
 }
 
 export async function generateAIProposal(clientName: string, projectName: string, description: string) {
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+  if (typeof window !== 'undefined') {
+    try {
+      const response = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'generateProposal', payload: { clientName, projectName, description } })
+      });
+      if (!response.ok) throw new Error('Erro no servidor');
+      const data = await response.json();
+      return data.result;
+    } catch (error) {
+      console.error('Client generateProposal proxy error:', error);
+      return await _generateAIProposalDirect(clientName, projectName, description);
+    }
+  }
+  return await _generateAIProposalDirect(clientName, projectName, description);
+}
+
+async function _generateAIProposalDirect(clientName: string, projectName: string, description: string) {
+  const ai = getAI();
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
     contents: `Gere uma proposta comercial profissional para um designer esportivo.

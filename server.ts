@@ -1,6 +1,5 @@
 import express from 'express';
 import { createServer } from 'http';
-import { WebSocketServer } from 'ws';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -13,86 +12,53 @@ async function startServer() {
   const server = createServer(app);
   const PORT = 3000;
 
-  // WebSocket Server setup
-  const wss = new WebSocketServer({ noServer: true });
-
-  // Handle errors on the WebSocket server itself
-  wss.on('error', (error) => {
-    console.error('WebSocket Server error:', error);
-  });
-
-  server.on('upgrade', (request, socket, head) => {
-    const { pathname } = new URL(request.url || '', `http://${request.headers.host}`);
-
-    if (pathname === '/ws-custom') {
-      wss.handleUpgrade(request, socket, head, (ws) => {
-        wss.emit('connection', ws, request);
-      });
-    }
-    // Vite's middleware will handle its own upgrades if we don't intercept them
-  });
-
-  wss.on('connection', (ws, req) => {
-    console.log('New WebSocket connection established from:', req.socket.remoteAddress);
-    
-    // Handle errors on individual socket connections
-    ws.on('error', (error) => {
-      console.error('WebSocket client error:', error);
-    });
-
-    // Connection health tracking
-    let isAlive = true;
-    ws.on('pong', () => {
-      isAlive = true;
-    });
-
-    // Keep-alive heartbeat
-    const interval = setInterval(() => {
-      if (isAlive === false) {
-        console.log('WebSocket connection timed out, terminating');
-        return ws.terminate();
-      }
-      
-      isAlive = false;
-      if (ws.readyState === ws.OPEN) {
-        try {
-          ws.ping();
-        } catch (err) {
-          console.error('Error sending ping:', err);
-        }
-      }
-    }, 30000);
-
-    ws.on('message', (message) => {
-      try {
-        console.log('Received message:', message.toString());
-        // Echo for testing
-        if (ws.readyState === ws.OPEN) {
-          ws.send(`Echo: ${message}`);
-        }
-      } catch (err) {
-        console.error('Error processing message:', err);
-      }
-    });
-
-    ws.on('close', (code, reason) => {
-      clearInterval(interval);
-      console.log(`WebSocket connection closed. Code: ${code}, Reason: ${reason}`);
-    });
-  });
-
-  // Global process error handling to prevent unhandled 'error' events from crashing the server
-  process.on('uncaughtException', (err) => {
-    console.error('Uncaught Exception:', err);
-  });
-
-  process.on('unhandledRejection', (reason, promise) => {
-    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  });
-
   // API Routes
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
+  app.post('/api/chat', express.json({ limit: '10mb' }), async (req, res) => {
+    try {
+      const { message, history, isProject, imageFiles } = req.body;
+      const { generateChatResponse } = await import('./src/services/geminiService');
+      const result = await generateChatResponse(message, history, null, imageFiles, isProject);
+      res.json(result);
+    } catch (error: any) {
+      console.error('API Chat Error:', error);
+      res.status(500).json({ error: error.message || 'Internal Server Error' });
+    }
+  });
+
+  app.post('/api/ai', express.json({ limit: '5mb' }), async (req, res) => {
+    try {
+      const { type, payload } = req.body;
+      const gemini = await import('./src/services/geminiService');
+      
+      let result;
+      switch (type) {
+        case 'autoCorrect':
+          result = await gemini.autoCorrectText(payload.text);
+          break;
+        case 'improvePrompt':
+          result = await gemini.improvePrompt(payload.prompt);
+          break;
+        case 'extractAndImprove':
+          result = await gemini.extractAndImprovePrompt(payload.aiResponse);
+          break;
+        case 'generateImage':
+          result = await gemini.generateImage(payload.prompt);
+          break;
+        case 'generateProposal':
+          result = await gemini.generateAIProposal(payload.clientName, payload.projectName, payload.description);
+          break;
+        default:
+          throw new Error('Tipo de operação AI inválido');
+      }
+      res.json({ result });
+    } catch (error: any) {
+      console.error('API AI Error:', error);
+      res.status(500).json({ error: error.message || 'Internal Server Error' });
+    }
   });
 
   // Vite middleware for development
@@ -117,7 +83,6 @@ async function startServer() {
 
   server.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on http://0.0.0.0:${PORT}`);
-    console.log(`WebSocket server active on wss://0.0.0.0:${PORT}`);
   });
 }
 
