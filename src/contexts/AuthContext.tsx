@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { auth, db } from '../firebase';
-import { signInAnonymously, onAuthStateChanged, User } from 'firebase/auth';
+import { signInAnonymously, onAuthStateChanged, User, EmailAuthProvider, linkWithCredential } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 interface UserProfile {
@@ -17,6 +17,7 @@ interface AuthContextType {
   loading: boolean;
   isAdmin: boolean;
   updateProfile: (data: Partial<UserProfile>) => Promise<void>;
+  linkAccount: (email: string, password: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -25,6 +26,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   isAdmin: false,
   updateProfile: async () => {},
+  linkAccount: async () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -48,7 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const newProfile: UserProfile = {
               uid: currentUser.uid,
               name: 'Designer',
-              email: 'guest@iavexis.com',
+              email: currentUser.email || 'guest@iavexis.com',
               role: 'user'
             };
             await setDoc(userDocRef, {
@@ -90,6 +92,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const linkAccount = async (email: string, password: string) => {
+    if (!user || !user.isAnonymous) {
+      throw new Error("Usuário não é anônimo ou não está logado.");
+    }
+    
+    const credential = EmailAuthProvider.credential(email, password);
+    try {
+      const usercred = await linkWithCredential(user, credential);
+      setUser(usercred.user);
+      
+      // Update profile with new email
+      await updateProfile({ email });
+    } catch (error) {
+      console.error("Error linking account:", error);
+      throw error;
+    }
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -97,6 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loading,
       isAdmin: profile?.role === 'admin',
       updateProfile,
+      linkAccount,
     }}>
       {!loading && children}
     </AuthContext.Provider>

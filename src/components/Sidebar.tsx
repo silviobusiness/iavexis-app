@@ -7,6 +7,8 @@ import { Plus, MessageSquare, Folder as FolderIcon, MoreVertical, Pin, Trash2, S
 import clsx from 'clsx';
 import { ViewType } from './MainLayout';
 import { Tooltip } from './Tooltip';
+import { useAuth } from '../contexts/AuthContext';
+import { LinkAccountModal } from './LinkAccountModal';
 
 interface SidebarProps {
   activeView: ViewType;
@@ -29,11 +31,13 @@ export function Sidebar({
   setIsMobileOpen,
   onToggleCollapse
 }: SidebarProps) {
-  const isAdmin = true;
+  const { user, profile } = useAuth();
+  const isAdmin = profile?.role === 'admin';
   const { chats, folders, activeChatId, setActiveChatId, createChat, deleteChat, updateChat, createFolder, updateFolder, deleteFolder, duplicateFolder } = useChat();
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
+  const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>(() => {
     const saved = localStorage.getItem('expandedFolders');
     return saved ? JSON.parse(saved) : {};
@@ -203,7 +207,7 @@ export function Sidebar({
           >
             <div className="relative">
               <img 
-                src={`https://ui-avatars.com/api/?name=Convidado&background=8EB69B&color=051F20`} 
+                src={profile?.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile?.name || 'Convidado')}&background=8EB69B&color=051F20`} 
                 alt="Profile" 
                 className="w-10 h-10 rounded-full object-cover border border-zinc-700 group-hover:border-emerald-500/50 transition-all duration-300 shadow-lg"
               />
@@ -239,12 +243,36 @@ export function Sidebar({
                 )}
               >
                 <div className="mb-4">
-                  <h2 className="text-sm font-semibold text-zinc-200 truncate">Usuário Convidado</h2>
+                  <h2 className="text-sm font-semibold text-zinc-200 truncate">{profile?.name || 'Usuário Convidado'}</h2>
+                  <p className="text-xs text-zinc-500 truncate mt-0.5">{profile?.email || 'guest@iavexis.com'}</p>
                 </div>
+                
+                {user?.isAnonymous && (
+                  <div className="border-t border-zinc-800 pt-3 mt-3">
+                    <button
+                      onClick={() => {
+                        setIsProfileOpen(false);
+                        setIsLinkModalOpen(true);
+                      }}
+                      className="w-full py-2 px-3 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Zap className="w-4 h-4" />
+                      Salvar Conta
+                    </button>
+                    <p className="text-[10px] text-zinc-500 text-center mt-2">
+                      Crie uma conta para não perder seus dados.
+                    </p>
+                  </div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
         </div>
+
+        <LinkAccountModal 
+          isOpen={isLinkModalOpen} 
+          onClose={() => setIsLinkModalOpen(false)} 
+        />
 
         {/* Main Navigation */}
         <nav className="p-3 space-y-1 border-b border-zinc-800">
